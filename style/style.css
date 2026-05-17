@@ -1,0 +1,108 @@
+/* style.css */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #fdf6ff, #e8f7ff);
+    color: #444;
+    margin: 0;
+    padding: 40px;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+body::before {
+    content: "🕯️";
+    position: fixed;
+    top: 20px;
+    right: 25px;
+    font-size: 3rem;
+    opacity: 0.15;
+}
+
+.container {
+    background: white;
+    padding: 35px;
+    border-radius: 24px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    max-width: 700px;
+    width: 100%;
+    border: 3px solid #ffe4f2;
+}
+
+h1 {
+    text-align: center;
+    color: #ff5ca8;
+    font-size: 2.5rem;
+    margin-bottom: 25px;
+}
+
+p {
+    font-size: 1.05rem;
+    padding: 14px;
+    border-radius: 14px;
+    margin-bottom: 20px;
+}
+
+p[style*="green"] {
+    background: #e8fff1;
+    border: 2px solid #9be7b0;
+    color: #2f8f4e !important;
+}
+
+p[style*="red"] {
+    background: #fff0f3;
+    border: 2px solid #ffb3c1;
+    color: #d6336c !important;
+}
+
+h3 {
+    color: #7a5cff;
+    margin-top: 25px;
+    margin-bottom: 15px;
+}
+
+ul {
+    list-style: none;
+    padding: 0;
+}
+
+li {
+    background: #f8f4ff;
+    margin-bottom: 12px;
+    padding: 14px 18px;
+    border-radius: 14px;
+    border-left: 6px solid #c8b6ff;
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+li:hover {
+    transform: translateX(5px);
+    background: #efe7ff;
+}
+
+button {
+    margin-top: 25px;
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #ff7eb3, #7afcff);
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+button:hover {
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: 0 8px 20px rgba(255, 126, 179, 0.3);
+}
+
+button:active {
+    transform: scale(0.98);
+}

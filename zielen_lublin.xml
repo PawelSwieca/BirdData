@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ZielenMiejskaWojLubelskie>
+    <Miasto nazwa="Powiat m. Lublin">
+        <Rok wartosc="2018">
+            <Kategoria nazwa="parki spacerowo - wypoczynkowe">186.00</Kategoria>
+            <Kategoria nazwa="zieleńce">105.00</Kategoria>
+            <Kategoria nazwa="zieleń uliczna">512.00</Kategoria>
+            <Kategoria nazwa="tereny zieleni osiedlowej">505.25</Kategoria>
+            <Kategoria nazwa="cmentarze">76.10</Kategoria>
+            <Kategoria nazwa="lasy gminne">1.97</Kategoria>
+        </Rok>
+        <Rok wartosc="2019">
+            <Kategoria nazwa="parki spacerowo - wypoczynkowe">166.00</Kategoria>
+            <Kategoria nazwa="zieleńce">105.00</Kategoria>
+            <Kategoria nazwa="zieleń uliczna">530.00</Kategoria>
+            <Kategoria nazwa="tereny zieleni osiedlowej">504.03</Kategoria>
+            <Kategoria nazwa="cmentarze">76.10</Kategoria>
+            <Kategoria nazwa="lasy gminne">1.97</Kategoria>
+        </Rok>
+        <Rok wartosc="2020">
+            <Kategoria nazwa="parki spacerowo - wypoczynkowe">186.00</Kategoria>
+            <Kategoria nazwa="zieleńce">105.00</Kategoria>
+            <Kategoria nazwa="zieleń uliczna">530.00</Kategoria>
+            <Kategoria nazwa="tereny zieleni osiedlowej">503.95</Kategoria>
+            <Kategoria nazwa="cmentarze">91.31</Kategoria>
+            <Kategoria nazwa="lasy gminne">2.25</Kategoria>
+        </Rok>
+        <Rok wartosc="2021">
+            <Kategoria nazwa="parki spacerowo - wypoczynkowe">186.00</Kategoria>
+            <Kategoria nazwa="zieleńce">105.00</Kategoria>
+            <Kategoria nazwa="zieleń uliczna">530.00</Kategoria>
+            <Kategoria nazwa="tereny zieleni osiedlowej">503.88</Kategoria>
+            <Kategoria nazwa="cmentarze">91.31</Kategoria>
+            <Kategoria nazwa="lasy gminne">2.02</Kategoria>
+        </Rok>
+        <Rok wartosc="2022">
+            <Kategoria nazwa="parki spacerowo - wypoczynkowe">186.00</Kategoria>
+            <Kategoria nazwa="zieleńce">105.73</Kategoria>
+            <Kategoria nazwa="zieleń uliczna">529.42</Kategoria>
+            <Kategoria nazwa="tereny zieleni osiedlowej">493.77</Kategoria>
+            <Kategoria nazwa="cmentarze">91.31</Kategoria>
+            <Kategoria nazwa="lasy gminne">1.94</Kategoria>
+        </Rok>
+    </Miasto>
+</ZielenMiejskaWojLubelskie>

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ tytul }}</title>
+    <link rel="stylesheet" href="{{ url_for('style', path='style.css') }}">
+</head>
+<body>
+
+<div class="container">
+    <h1>{{ tytul }}</h1>
+
+    {% if czy_zalogowany %}
+    <p style="color: green;">Witaj Administratorze! Masz pełen dostęp do danych.</p>
+    {% else %}
+    <p style="color: red;">Zaloguj się, aby pobrać XML.</p>
+    {% endif %}
+
+    <h3>Dostępne lata do analizy:</h3>
+    <ul>
+        {% for rok in lata_badane %}
+        <li>Rok pomiarowy: <b>{{ rok }}</b></li>
+        {% endfor %}
+    </ul>
+
+    <button onclick="pobierzPtakiZBackendu()">Pobierz ptaki z GBIF</button>
+
+    <hr>
+    <div id="wynik-api"></div>
+</div>
+
+<script src="{{ url_for('static', path='script.js') }}"></script>
+</body>
+</html>
