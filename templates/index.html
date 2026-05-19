@@ -23,7 +23,11 @@
         {% endfor %}
     </ul>
 
-    <button onclick="pobierzPtakiZBackendu()">Pobierz ptaki z GBIF</button>
+    <button onclick="pobierzPtakiZBackendu()">Pobierz próbkę ptaków z GBIF</button>
+
+    <button onclick="uruchomIntegracje()" style="background-color: #7a5cff; color: white; margin-left: 10px;">
+        Integruj dane (XML + REST) i zapisz do Bazy DB
+    </button>
 
     <hr>
     <div id="wynik-api"></div>
