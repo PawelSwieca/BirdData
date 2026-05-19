@@ -51,7 +51,7 @@ async function pobierzPtakiZBackendu() {
 
 async function uruchomIntegracje() {
     const kontenerWynikow = document.getElementById('wynik-api');
-    kontenerWynikow.innerHTML = "<p><em>Trwa integracja danych z XML i API oraz bezpieczny zapis (SERIALIZABLE) do bazy SQLite za pomocą ORM... ⚙️</em></p>";
+    kontenerWynikow.innerHTML = "<p><em>Trwa integracja danych z XML i API oraz bezpieczny zapis (SERIALIZABLE) do bazy SQLite za pomocą ORM...</em></p>";
 
     try {
         const odpowiedz = await fetch('/api/integruj_i_zapisz', { method: 'POST' });
@@ -69,7 +69,7 @@ async function uruchomIntegracje() {
             kontenerWynikow.innerHTML = `
                 <h4 style="color: #2f8f4e;">Integracja i zapis do bazy zakończone pomyślnie!</h4>
                 <p><b>Informacja ORM:</b> ${info}</p>
-                <p><i>Zajrzyj do folderu projektu – powstał tam fizyczny plik bazy danych "baza_projektowa.db".</i></p>
+                <p><i>Utworzono plik "baza_projektowa.db".</i></p>
             `;
         } else {
             throw new Error(dane.wiadomosc);
