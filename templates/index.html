@@ -10,6 +10,16 @@
 <div class="container">
     <h1>{{ tytul }}</h1>
 
+    <script>
+        if (!localStorage.getItem("token")) {
+            window.location.href = "/login";
+        }
+    </script>
+
+    <button onclick="localStorage.removeItem('token'); window.location.href='/login';">
+        Wyloguj się
+    </button>
+
     {% if czy_zalogowany %}
     <p style="color: green;">Witaj Administratorze! Masz pełen dostęp do danych.</p>
     {% else %}
@@ -25,9 +35,11 @@
 
     <button onclick="pobierzPtakiZBackendu()">Pobierz próbkę ptaków z GBIF</button>
 
-    <button onclick="uruchomIntegracje()" style="background-color: #7a5cff; color: white; margin-left: 10px;">
+    <button onclick="uruchomIntegracje()">
         Integruj dane (XML + REST) i zapisz do Bazy DB
     </button>
+
+    <button onclick="filtrujWybranePtaki()">Ilość kaczek w roku 2020?</button>
 
     <hr>
     <div id="wynik-api"></div>

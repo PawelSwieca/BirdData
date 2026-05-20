@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login ✨</title>
+    <link rel="stylesheet" href="{{ url_for('style', path='login.css') }}">
+</head>
+<body>
+
+<div class="container">
+    <h2>Logowanie 💫</h2>
+
+    <form id="loginForm">
+        <div class="input-group">
+            <input type="text" id="username" placeholder="Twój login" required>
+        </div>
+        <div class="input-group">
+            <input type="password" id="password" placeholder="Hasło" required>
+        </div>
+        <button type="submit">Zaloguj się ✨</button>
+    </form>
+
+    <p id="msg"></p>
+</div>
+
+<script>
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const msgElement = document.getElementById("msg");
+    msgElement.className = "";
+    msgElement.innerText = "Chwileczkę... 🔮";
+
+    const formData = new URLSearchParams();
+    formData.append("username", document.getElementById("username").value);
+    formData.append("password", document.getElementById("password").value);
+
+    try {
+        const res = await fetch("/login", {
+            method: "POST",
+            body: formData,
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded"
+            }
+        });
+
+        const data = await res.json();
+
+        if (data.access_token) {
+            localStorage.setItem("token", data.access_token);
+            msgElement.className = "msg-success";
+            msgElement.innerText = "Zalogowano!";
+            setTimeout(() => {
+                window.location.href = "/";
+            }, 800);
+        } else {
+            msgElement.className = "msg-error";
+            msgElement.innerText = "Błąd logowania";
+        }
+    } catch (error) {
+        msgElement.className = "msg-error";
+        msgElement.innerText = "Coś poszło nie tak...";
+    }
+});
+</script>
+
+</body>
+</html>
