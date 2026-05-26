@@ -1,38 +1,21 @@
-from fastapi import FastAPI, Request, Depends, HTTPException
+from fastapi import FastAPI, Request, Depends, HTTPException, Form
 from fastapi.responses import HTMLResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette import status
+from starlette.responses import JSONResponse
 import xml.etree.ElementTree as ET
 import requests
 from datetime import timedelta
+from sqlalchemy.orm import Session
+import re
 
+from static import jwt_auth
+from db.database import engine, Base, get_db, SessionLocal
+from db.models import User, RaportZintegrowany
 
-from sqlalchemy import create_engine, Column, Integer, Float, String
-from sqlalchemy.orm import declarative_base, sessionmaker
-
-import jwt_auth
-
-SQLALCHEMY_DATABASE_URL = "sqlite:///./baza_projektowa.db"
-
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    isolation_level="SERIALIZABLE"
-)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
-
-
-class RaportZintegrowany(Base):
-    __tablename__ = "raporty_zintegrowane"
-    id = Column(Integer, primary_key=True, index=True)
-    rok = Column(Integer, index=True)
-    gatunek = Column(String, index=True)
-    powierzchnia_parkow_ha = Column(Float)
-    liczba_ptakow_api = Column(Integer)
-
-
+# Create all tables (including the new User table)
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
@@ -41,7 +24,6 @@ templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/style", StaticFiles(directory="style"), name="style")
 
-
 GATUNKI_ANALITYCZNE = {
     "Wróbel domowy": "Passer domesticus",
     "Kaczka krzyżówka": "Anas platyrhynchos",
@@ -49,22 +31,80 @@ GATUNKI_ANALITYCZNE = {
 }
 
 
+# --- AUTH ROUTES ---
+
 @app.post("/login")
-def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = jwt_auth.authenticate_user(form_data.username, form_data.password)
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    # Notice we pass `db` to authenticate_user now
+    user = jwt_auth.authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code=400, detail="Nieprawidłowy login lub hasło")
 
     token = jwt_auth.create_access_token(
-        data={"sub": user["username"]},
+        data={"sub": user.username},  # user is now a SQLAlchemy object, so use .username instead of ["username"]
         expires_delta=timedelta(minutes=jwt_auth.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     return {"access_token": token, "token_type": "bearer"}
 
 
+@app.post("/register")
+async def register_user(
+        username: str = Form(...),
+        email: str = Form(...),
+        password: str = Form(...),
+        db: Session = Depends(get_db)
+):
+    # --- 1. WALIDACJA DANYCH ---
+    if len(username) < 3:
+        raise HTTPException(status_code=400, detail="Login musi mieć co najmniej 3 znaki.")
+
+    if not re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", email):
+        raise HTTPException(status_code=400, detail="Podaj poprawny adres e-mail.")
+
+    if len(password) < 6:
+        raise HTTPException(status_code=400, detail="Hasło musi mieć co najmniej 6 znaków.")
+
+    # --- 2. SPRAWDZENIE CZY UŻYTKOWNIK ISTNIEJE ---
+    existing_user = db.query(User).filter(
+        (User.username == username) | (User.email == email)
+    ).first()
+
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="Ten login lub e-mail jest już zajęty."
+        )
+
+    # --- 3. ZAPIS DO BAZY ---
+    hashed_pwd = jwt_auth.get_password_hash(password)
+    new_user = User(username=username, email=email, hashed_password=hashed_pwd)
+
+    try:
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Wystąpił błąd bazy danych.")
+
+    # --- 4. AUTO-LOGIN (Generowanie tokenu od razu po rejestracji) ---
+    token = jwt_auth.create_access_token(
+        data={"sub": new_user.username},
+        expires_delta=timedelta(minutes=jwt_auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+
+    return {"access_token": token, "token_type": "bearer", "message": "Konto zostało utworzone"}
+
+# --- PAGE ROUTES ---
+
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
     return templates.TemplateResponse(request=request, name="login.html", context={})
+
+
+@app.get("/register", response_class=HTMLResponse)
+def register_page(request: Request):
+    return templates.TemplateResponse(request=request, name="register.html", context={})
 
 
 @app.get("/")
@@ -76,6 +116,8 @@ def strona_glowna(request: Request):
     }
     return templates.TemplateResponse(request=request, name="index.html", context=dane_do_wyslania)
 
+
+# --- API ROUTES ---
 
 @app.get("/api/ptaki/{rok}")
 def pobierz_ptaki(rok: int, user=Depends(jwt_auth.get_current_user)):
@@ -94,18 +136,17 @@ def pobierz_ptaki(rok: int, user=Depends(jwt_auth.get_current_user)):
         "przykladowe_ptaki": obserwacje
     }
 
-@app.post("/api/integruj_i_zapisz")
-def integruj_do_bazy(user=Depends(jwt_auth.get_current_user)):
-    db = SessionLocal()
-    try:
 
+@app.post("/api/integruj_i_zapisz")
+def integruj_do_bazy(user=Depends(jwt_auth.get_current_user), db: Session = Depends(get_db)):
+    # Notice I replaced SessionLocal() here with the injected `db` dependency
+    try:
         drzewo = ET.parse("zielen_lublin.xml")
         korzen = drzewo.getroot()
 
         miasto = korzen.find("Miasto")
         if miasto is None:
             miasto = korzen
-
 
         zielen_slownik = {}
         for rok_elem in miasto.findall("Rok"):
@@ -116,22 +157,18 @@ def integruj_do_bazy(user=Depends(jwt_auth.get_current_user)):
 
         raporty_dodane_count = 0
 
-
         for rok in [2018, 2019, 2020, 2021, 2022]:
             powierzchnia = zielen_slownik.get(rok, 0.0)
 
             for nazwa_pl, nazwa_latin in GATUNKI_ANALITYCZNE.items():
-
                 istnieje = db.query(RaportZintegrowany).filter(
                     RaportZintegrowany.rok == rok,
                     RaportZintegrowany.gatunek == nazwa_pl
                 ).first()
 
                 if not istnieje:
-                    # Strzał do API po konkretnego ptaszora
                     url = f"https://api.gbif.org/v1/occurrence/search?country=PL&stateProvince=Lubelskie&classKey=212&scientificName={nazwa_latin}&year={rok}&limit=1"
                     liczba_ptakow = requests.get(url).json().get("count", 0)
-
 
                     nowy_wpis = RaportZintegrowany(
                         rok=rok,
@@ -148,18 +185,12 @@ def integruj_do_bazy(user=Depends(jwt_auth.get_current_user)):
     except Exception as e:
         db.rollback()
         return {"status": "blad", "wiadomosc": str(e)}
-    finally:
-        db.close()
-
 
 
 @app.get("/api/wykres/{gatunek}")
-def pobierz_dane_wykresu(gatunek: str, user=Depends(jwt_auth.get_current_user)):
-    db = SessionLocal()
+def pobierz_dane_wykresu(gatunek: str, user=Depends(jwt_auth.get_current_user), db: Session = Depends(get_db)):
     wyniki = db.query(RaportZintegrowany).filter(RaportZintegrowany.gatunek == gatunek).order_by(
         RaportZintegrowany.rok.asc()).all()
-    db.close()
-
 
     return {
         "lata": [r.rok for r in wyniki],

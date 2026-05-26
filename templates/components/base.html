@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Bioróżnorodność{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('style', path='style.css') }}">
+
+    <script>
+        if (localStorage.getItem('theme') === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    </script>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<div class="global-actions">
+    <button id="themeToggle" class="btn-icon" title="Przełącz motyw">
+        <img src="{{ url_for('static', path='icons/sun.svg') }}"
+             class="theme-icon icon-sun"
+             alt="Sun">
+
+        <img src="{{ url_for('static', path='icons/moon.svg') }}"
+             class="theme-icon icon-moon"
+             alt="Moon">
+    </button>
+    <button id="globalLogoutBtn" class="btn-logout" style="display: none;"
+            onclick="localStorage.removeItem('token'); window.location.href='/login';">
+        Wyloguj się
+    </button>
+</div>
+
+{% block content %}
+{% endblock %}
+
+<script src="{{ url_for('static', path='script.js') }}"></script>
+</body>
+</html>

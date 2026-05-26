@@ -1,72 +1,69 @@
-<!DOCTYPE html>
-<html lang="pl">
-<head>
-    <meta charset="UTF-8">
-    <title>{{ tytul }}</title>
-    <link rel="stylesheet" href="{{ url_for('style', path='style.css') }}?v=3">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body>
+{% extends "./components/base.html" %}
 
-<div class="container">
+{% block title %}{{ tytul }}{% endblock %}
+
+{% block extra_head %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="glass-panel panel-app">
+
     <h1>{{ tytul }}</h1>
 
-    <script>
-        if (!localStorage.getItem("token")) {
-            window.location.href = "/login";
-        }
-    </script>
-
-    <button onclick="localStorage.removeItem('token'); window.location.href='/login';" class="btn-logout">
-        Wyloguj się
-    </button>
-
     {% if czy_zalogowany %}
-    <p class="msg-admin">Witaj Administratorze! Masz pełen dostęp do danych.</p>
+    <div class="msg msg-success">Witaj Administratorze! Masz pełen dostęp do danych.</div>
     {% else %}
-    <p class="msg-guest">Zaloguj się, aby pobrać XML.</p>
+    <div class="msg msg-error">Zaloguj się, aby pobrać dane.</div>
     {% endif %}
 
-    <h3>Dostępne lata do analizy:</h3>
-    <ul>
-        {% for rok in lata_badane %}
-        <li>Rok pomiarowy: <b>{{ rok }}</b></li>
-        {% endfor %}
-    </ul>
+    <div class="tabs-header">
+        <button class="tab-btn active" onclick="switchTab('tab-db')">Baza Danych 🗄️</button>
+        <button class="tab-btn" onclick="switchTab('tab-api')">Eksplorator API 🌍</button>
+        <button class="tab-btn" onclick="switchTab('tab-chart')">Analizy 📊</button>
+    </div>
 
-    <div class="analysis-section">
-        <h4>Eksplorator surowych danych API (Na żywo)</h4>
-        <div class="input-container">
-            <label class="input-label" for="input-rok">Wpisz rok badania:</label>
-            <input class="input-field" type="number" id="input-rok" value="2022" min="2000" max="2024">
-            <button class="bnt-search" onclick="pobierzPtakiZBackendu()">Szukaj w GBIF</button>
+    <div id="tab-db" class="tab-content active">
+        <div class="analysis-section">
+            <h4>Dostępne lata do analizy:</h4>
+            <div class="flex-row" style="flex-wrap: wrap; gap: 10px;">
+                {% for rok in lata_badane %}
+                <span style="background: var(--input-bg); padding: 8px 16px; border-radius: 20px; font-weight: 600; color: var(--primary); border: 1px solid var(--input-border);">
+                    {{ rok }}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        <button onclick="uruchomIntegracje()">Integruj dane (XML + REST) i zapisz do DB ⚡</button>
+    </div>
+
+    <div id="tab-api" class="tab-content">
+        <div class="analysis-section">
+            <h4>Pobieranie surowych danych na żywo</h4>
+            <div class="flex-row">
+                <input class="input-field" type="number" id="input-rok" value="2022" min="2000" max="2024" style="max-width: 150px;">
+                <button class="btn-accent" style="width: auto;" onclick="pobierzPtakiZBackendu()">Szukaj w GBIF</button>
+            </div>
+            <div id="wynik-api" style="margin-top: 20px;"></div>
         </div>
     </div>
 
-    <button onclick="uruchomIntegracje()" class="btn-integrate">
-        Integruj dane (XML + REST) i zapisz do Bazy DB
-    </button>
-
-<div class="analysis-section">
-        <label for="select-ptak" class="analysis-label">Wybierz gatunek do analizy korelacji:</label>
-
-        <select id="select-ptak" class="analysis-select">
-            <option value="Wróbel domowy">Wróbel domowy (Passer domesticus)</option>
-            <option value="Kaczka krzyżówka">Kaczka krzyżówka (Anas platyrhynchos)</option>
-            <option value="Gęś gęgawa">Gęś gęgawa (Anser anser)</option>
-        </select>
-
-        <button onclick="generujWykresAnalizy()" class="btn-generate">Generuj Wykres Liniowy 📊</button>
+    <div id="tab-chart" class="tab-content">
+        <div class="analysis-section">
+            <h4>Analiza korelacji populacji</h4>
+            <div class="flex-row">
+                <select id="select-ptak" class="analysis-select">
+                    <option value="Wróbel domowy">Wróbel domowy (Passer domesticus)</option>
+                    <option value="Kaczka krzyżówka">Kaczka krzyżówka (Anas platyrhynchos)</option>
+                    <option value="Gęś gęgawa">Gęś gęgawa (Anser anser)</option>
+                </select>
+                <button class="btn-accent" style="width: auto;" onclick="generujWykresAnalizy()">Generuj Wykres</button>
+            </div>
+            <div style="margin-top: 30px; background: var(--input-bg); border-radius: 16px; padding: 15px; border: 1px solid var(--input-border);">
+                <canvas id="canvasWykresu" width="400" height="200"></canvas>
+            </div>
+        </div>
     </div>
 
-    <div class="canvas-container">
-        <canvas id="canvasWykresu" width="400" height="200"></canvas>
-    </div>
-
-    <hr>
-    <div id="wynik-api"></div>
 </div>
-
-<script src="{{ url_for('static', path='script.js') }}?v=3"></script>
-</body>
-</html>
+{% endblock %}
