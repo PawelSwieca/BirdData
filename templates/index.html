@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>{{ tytul }}</title>
-    <link rel="stylesheet" href="{{ url_for('style', path='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('style', path='style.css') }}?v=3">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -16,14 +17,14 @@
         }
     </script>
 
-    <button onclick="localStorage.removeItem('token'); window.location.href='/login';">
+    <button onclick="localStorage.removeItem('token'); window.location.href='/login';" class="btn-logout">
         Wyloguj się
     </button>
 
     {% if czy_zalogowany %}
-    <p style="color: green;">Witaj Administratorze! Masz pełen dostęp do danych.</p>
+    <p class="msg-admin">Witaj Administratorze! Masz pełen dostęp do danych.</p>
     {% else %}
-    <p style="color: red;">Zaloguj się, aby pobrać XML.</p>
+    <p class="msg-guest">Zaloguj się, aby pobrać XML.</p>
     {% endif %}
 
     <h3>Dostępne lata do analizy:</h3>
@@ -33,18 +34,39 @@
         {% endfor %}
     </ul>
 
-    <button onclick="pobierzPtakiZBackendu()">Pobierz próbkę ptaków z GBIF</button>
+    <div class="analysis-section">
+        <h4>Eksplorator surowych danych API (Na żywo)</h4>
+        <div class="input-container">
+            <label class="input-label" for="input-rok">Wpisz rok badania:</label>
+            <input class="input-field" type="number" id="input-rok" value="2022" min="2000" max="2024">
+            <button class="bnt-search" onclick="pobierzPtakiZBackendu()">Szukaj w GBIF</button>
+        </div>
+    </div>
 
-    <button onclick="uruchomIntegracje()">
+    <button onclick="uruchomIntegracje()" class="btn-integrate">
         Integruj dane (XML + REST) i zapisz do Bazy DB
     </button>
 
-    <button onclick="filtrujWybranePtaki()">Ilość kaczek w roku 2020?</button>
+<div class="analysis-section">
+        <label for="select-ptak" class="analysis-label">Wybierz gatunek do analizy korelacji:</label>
+
+        <select id="select-ptak" class="analysis-select">
+            <option value="Wróbel domowy">Wróbel domowy (Passer domesticus)</option>
+            <option value="Kaczka krzyżówka">Kaczka krzyżówka (Anas platyrhynchos)</option>
+            <option value="Gęś gęgawa">Gęś gęgawa (Anser anser)</option>
+        </select>
+
+        <button onclick="generujWykresAnalizy()" class="btn-generate">Generuj Wykres Liniowy 📊</button>
+    </div>
+
+    <div class="canvas-container">
+        <canvas id="canvasWykresu" width="400" height="200"></canvas>
+    </div>
 
     <hr>
     <div id="wynik-api"></div>
 </div>
 
-<script src="{{ url_for('static', path='script.js') }}"></script>
+<script src="{{ url_for('static', path='script.js') }}?v=3"></script>
 </body>
 </html>

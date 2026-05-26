@@ -1,4 +1,38 @@
-// --- Funkcja pomocnicza do wysyłania tokenu JWT ---
+async function pobierzPtakiZBackendu() {
+    const kontenerWynikow = document.getElementById('wynik-api');
+
+    const wybranyRok = document.getElementById('input-rok').value;
+
+    if (!wybranyRok || wybranyRok < 1800 || wybranyRok > 2025) {
+        alert("Proszę wpisać poprawny rok!");
+        return;
+    }
+
+    kontenerWynikow.innerHTML = `<p><em>Łączenie z GBIF API i pobieranie danych dla roku ${wybranyRok}...</em></p>`;
+
+    try {
+        const odpowiedz = await wykonajAutoryzowanyFetch(`/api/ptaki/${wybranyRok}`);
+        if (!odpowiedz.ok) throw new Error(`Błąd serwera: ${odpowiedz.status}`);
+
+        const dane = await odpowiedz.json();
+
+        let htmlDoWstawienia = `
+            <h4 style="color: #007bb5;">Sukces! Połączono z bazą zewnętrzną.</h4>
+            <p><b>Łączna liczba zarejestrowanych obserwacji wszystkich ptaków w woj. lubelskim w ${wybranyRok} roku:</b> ${dane.laczna_liczba_obserwacji_w_api}</p>
+            <h5>Przykładowe 5 rekordów z JSON-a:</h5>
+            <ul>
+        `;
+
+        dane.przykladowe_ptaki.forEach(ptak => {
+            htmlDoWstawienia += `<li>Gatunek: <b>${ptak.gatunek || "Nieznany"}</b> (Zgłoszono w miesiącu nr: ${ptak.miesiac || "?"})</li>`;
+        });
+
+        kontenerWynikow.innerHTML = htmlDoWstawienia + `</ul>`;
+    } catch (error) {
+        kontenerWynikow.innerHTML = `<p style="color: red;"><b>BŁĄD:</b> ${error.message}</p>`;
+    }
+}
+
 async function wykonajAutoryzowanyFetch(url, opcje = {}) {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -6,95 +40,113 @@ async function wykonajAutoryzowanyFetch(url, opcje = {}) {
         window.location.href = "/login";
         throw new Error("Brak tokenu autoryzacji");
     }
-
     const domyslneOpcje = {
         headers: {
             "Authorization": `Bearer ${token}`,
             "Content-Type": "application/json"
         }
     };
-
     const odpowiedz = await fetch(url, { ...domyslneOpcje, ...opcje });
-
-    // Jeśli token wygasł, przenieś do logowania
     if (odpowiedz.status === 401) {
         localStorage.removeItem("token");
         window.location.href = "/login";
         throw new Error("Sesja wygasła");
     }
-
     return odpowiedz;
 }
 
-// ----------------------------------------------------
 
-async function pobierzPtakiZBackendu() {
-    const kontenerWynikow = document.getElementById('wynik-api');
-    kontenerWynikow.innerHTML = "<p><em>Łączenie z backendem FastAPI i pobieranie ptaków...</em></p>";
-
-    try {
-        const odpowiedz = await wykonajAutoryzowanyFetch('/api/ptaki/2020');
-        if (!odpowiedz.ok) throw new Error(`Błąd serwera: ${odpowiedz.status}`);
-
-        const dane = await odpowiedz.json();
-        let htmlDoWstawienia = `
-            <h4 style="color: blue;">${dane.wiadomosc}</h4>
-            <p><b>Łącznie w bazie GBIF:</b> ${dane.laczna_liczba_obserwacji_w_api} obserwacji</p>
-            <h5>Przykładowe 5 ptaków:</h5><ul>
-        `;
-        dane.przykladowe_ptaki.forEach(ptak => {
-            htmlDoWstawienia += `<li><b>${ptak.gatunek}</b> (miesiąc: ${ptak.miesiac})</li>`;
-        });
-        kontenerWynikow.innerHTML = htmlDoWstawienia + `</ul>`;
-    } catch (error) {
-        kontenerWynikow.innerHTML = `<p style="color: red;"><b>BŁĄD:</b> ${error.message}</p>`;
-    }
-}
+let mojWykresInstance = null;
 
 async function uruchomIntegracje() {
     const kontenerWynikow = document.getElementById('wynik-api');
-    kontenerWynikow.innerHTML = "<p><em>Trwa integracja danych (XML+REST) z bezpiecznym zapisem do SQLite...</em></p>";
-
+    kontenerWynikow.innerHTML = "<p><em>Trwa analityczna integracja danych (XML + 3 Gatunki z REST API) w bazie danych...</em></p>";
     try {
         const odpowiedz = await wykonajAutoryzowanyFetch('/api/integruj_i_zapisz', { method: 'POST' });
         if (!odpowiedz.ok) throw new Error(`Błąd serwera: ${odpowiedz.status}`);
-
         const dane = await odpowiedz.json();
+
         if (dane.status === "Sukces!") {
-            let info = dane.dodane_lata.length > 0
-                ? `Dodano wpisy dla lat: ${dane.dodane_lata.join(', ')}`
-                : "Baza jest już aktualna.";
-            kontenerWynikow.innerHTML = `
-                <h4 style="color: #2f8f4e;">Integracja zakończona pomyślnie!</h4>
-                <p><b>Informacja ORM:</b> ${info}</p>
-                <p><i>Utworzono plik "baza_projektowa.db".</i></p>`;
+            kontenerWynikow.innerHTML = `<h4 style="color: #2f8f4e;">Baza zaktualizowana!</h4><p>${dane.wiadomosc}</p>`;
         } else {
             throw new Error(dane.wiadomosc);
         }
     } catch (error) {
-        kontenerWynikow.innerHTML = `<p style="color: red;"><b>BŁĄD INTEGRACJI:</b> ${error.message}</p>`;
+        kontenerWynikow.innerHTML = `<p style="color: red;"><b>BŁĄD:</b> ${error.message}</p>`;
     }
 }
 
-async function filtrujWybranePtaki() {
+
+async function generujWykresAnalizy() {
     const kontenerWynikow = document.getElementById('wynik-api');
-    kontenerWynikow.innerHTML = "<p><em>Szukam kaczek w bazie GBIF...</em></p>";
+
+    const wybranyGatunek = document.getElementById('select-ptak').value;
+
+    kontenerWynikow.innerHTML = `<p><em>Pobieranie (Import) danych o gatunku: <b>${wybranyGatunek}</b> z bazy SQLite...</em></p>`;
 
     try {
-        const odpowiedz = await wykonajAutoryzowanyFetch('/api/ptaki/2020/Anas platyrhynchos');
-        if (!odpowiedz.ok) throw new Error(`Błąd serwera: ${odpowiedz.status}`);
 
-        const dane = await odpowiedz.json();
-        let htmlDoWstawienia = `
-            <h4 style="color: #2f8f4e;">${dane.wiadomosc}</h4>
-            <p><b>Ilość znalezionych kaczek krzyżówek w tym roku:</b> ${dane.laczna_liczba_obserwacji_w_api}</p>
-            <h5>Przykładowe obserwacje z API:</h5><ul>
-        `;
-        dane.przykladowe_ptaki.forEach(ptak => {
-            htmlDoWstawienia += `<li>Gatunek: <b>${ptak.gatunek}</b> (miesiąc: ${ptak.miesiac})</li>`;
+        const odpowiedz = await wykonajAutoryzowanyFetch(`/api/wykres/${wybranyGatunek}`);
+        if (!odpowiedz.ok) throw new Error("Brak danych w bazie! Najpierw kliknij fioletowy przycisk integracji.");
+
+        const daneZ_Bazy = await odpowiedz.json();
+
+        if (daneZ_Bazy.lata.length === 0) {
+            throw new Error("Baza danych jest pusta. Uruchom najpierw integrację danych plików.");
+        }
+
+
+        kontenerWynikow.innerHTML = `<h4>Wykres trendu dla: ${wybranyGatunek} (Dane zaimportowane z SQLite)</h4>`;
+
+
+        if (mojWykresInstance) {
+            mojWykresInstance.destroy();
+        }
+
+
+        const ctx = document.getElementById('canvasWykresu').getContext('2d');
+        mojWykresInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: daneZ_Bazy.lata,
+                datasets: [
+                    {
+                        label: 'Powierzchnia parków (ha) ',
+                        data: daneZ_Bazy.zielen,
+                        borderColor: '#2f8f4e',
+                        backgroundColor: 'rgba(47, 143, 78, 0.1)',
+                        yAxisID: 'y-zielen',
+                        tension: 0.2
+                    },
+                    {
+                        label: `Liczba obserwacji ptaka `,
+                        data: daneZ_Bazy.ptaki,
+                        borderColor: '#7a5cff',
+                        backgroundColor: 'rgba(122, 92, 255, 0.1)',
+                        yAxisID: 'y-ptaki',
+                        tension: 0.2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    'y-zielen': {
+                        type: 'linear',
+                        position: 'left',
+                        title: { display: true, text: 'Hektary [ha]', color: '#2f8f4e' }
+                    },
+                    'y-ptaki': {
+                        type: 'linear',
+                        position: 'right',
+                        title: { display: true, text: 'Liczba rekordów w GBIF', color: '#7a5cff' },
+                        grid: { drawOnChartArea: false }
+                    }
+                }
+            }
         });
-        kontenerWynikow.innerHTML = htmlDoWstawienia + `</ul>`;
+
     } catch (error) {
-        kontenerWynikow.innerHTML = `<p style="color: red;"><b>BŁĄD:</b> ${error.message}</p>`;
+        kontenerWynikow.innerHTML = `<p style="color: red;"><b>BŁĄD WYKRESU:</b> ${error.message}</p>`;
     }
 }

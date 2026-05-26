@@ -1,15 +1,14 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.responses import HTMLResponse
+from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import xml.etree.ElementTree as ET
 import requests
-
 from datetime import timedelta
-from fastapi import Depends, HTTPException
-from fastapi.security import OAuth2PasswordRequestForm
 
-from sqlalchemy import create_engine, Column, Integer, Float
+
+from sqlalchemy import create_engine, Column, Integer, Float, String
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 import jwt_auth
@@ -28,7 +27,8 @@ Base = declarative_base()
 class RaportZintegrowany(Base):
     __tablename__ = "raporty_zintegrowane"
     id = Column(Integer, primary_key=True, index=True)
-    rok = Column(Integer, unique=True, index=True)
+    rok = Column(Integer, index=True)
+    gatunek = Column(String, index=True)
     powierzchnia_parkow_ha = Column(Float)
     liczba_ptakow_api = Column(Integer)
 
@@ -36,11 +36,17 @@ class RaportZintegrowany(Base):
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-
 templates = Jinja2Templates(directory="templates")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/style", StaticFiles(directory="style"), name="style")
+
+
+GATUNKI_ANALITYCZNE = {
+    "Wróbel domowy": "Passer domesticus",
+    "Kaczka krzyżówka": "Anas platyrhynchos",
+    "Gęś gęgawa": "Anser anser"
+}
 
 
 @app.post("/login")
@@ -71,72 +77,92 @@ def strona_glowna(request: Request):
     return templates.TemplateResponse(request=request, name="index.html", context=dane_do_wyslania)
 
 
-
 @app.get("/api/ptaki/{rok}")
 def pobierz_ptaki(rok: int, user=Depends(jwt_auth.get_current_user)):
     url = f"https://api.gbif.org/v1/occurrence/search?country=PL&stateProvince=Lubelskie&classKey=212&year={rok}&limit=5"
     odpowiedz = requests.get(url)
     dane_json = odpowiedz.json()
-    obserwacje = [{"gatunek": el.get("scientificName"), "miesiac": el.get("month")} for el in
-                  dane_json.get("results", [])]
-    return {"wiadomosc": f"Pobrano dane dla {rok}", "laczna_liczba_obserwacji_w_api": dane_json.get("count"),
-            "przykladowe_ptaki": obserwacje}
 
+    obserwacje = [
+        {"gatunek": el.get("scientificName"), "miesiac": el.get("month")}
+        for el in dane_json.get("results", [])
+    ]
 
-@app.get("/api/ptaki/{rok}/{gatunek}")
-def pobierz_ptaki_gatunek(rok: int, gatunek: str, user=Depends(jwt_auth.get_current_user)):
-    url = f"https://api.gbif.org/v1/occurrence/search?country=PL&stateProvince=Lubelskie&classKey=212&scientificName={gatunek}&year={rok}&limit=5"
-    odpowiedz = requests.get(url)
-    dane_json = odpowiedz.json()
-    obserwacje = [{"gatunek": el.get("scientificName"), "miesiac": el.get("month")} for el in
-                  dane_json.get("results", [])]
-    return {"wiadomosc": f"Pobrano dane dla {rok} dla gatunku {gatunek}",
-            "laczna_liczba_obserwacji_w_api": dane_json.get("count"), "przykladowe_ptaki": obserwacje}
-
-
-@app.get("/api/zielen")
-def odczytaj_xml(user=Depends(jwt_auth.get_current_user)):
-    try:
-        drzewo = ET.parse("zielen_lublin.xml")
-        korzen = drzewo.getroot()
-        wyniki = []
-        for rok_elem in korzen.find("Miasto").findall("Rok"):
-            rok_wartosc = int(rok_elem.attrib.get("wartosc"))
-            for kat in rok_elem.findall("Kategoria"):
-                if kat.attrib.get("nazwa") == "parki spacerowo - wypoczynkowe":
-                    wyniki.append({"rok": rok_wartosc, "powierzchnia_parkow_ha": float(kat.text)})
-        return {"statystyki": wyniki}
-    except FileNotFoundError:
-        return {"blad": "Brak pliku zielen_lublin.xml"}
-
+    return {
+        "wiadomosc": f"Pobrano dane dla {rok}",
+        "laczna_liczba_obserwacji_w_api": dane_json.get("count"),
+        "przykladowe_ptaki": obserwacje
+    }
 
 @app.post("/api/integruj_i_zapisz")
 def integruj_do_bazy(user=Depends(jwt_auth.get_current_user)):
     db = SessionLocal()
     try:
-        dane_xml = odczytaj_xml(user)
-        if "blad" in dane_xml:
-            return dane_xml
 
-        raporty_dodane = []
-        for stat in dane_xml["statystyki"]:
-            rok = stat["rok"]
-            powierzchnia = stat["powierzchnia_parkow_ha"]
+        drzewo = ET.parse("zielen_lublin.xml")
+        korzen = drzewo.getroot()
 
-            url = f"https://api.gbif.org/v1/occurrence/search?country=PL&stateProvince=Lubelskie&classKey=212&year={rok}&limit=1"
-            liczba_ptakow = requests.get(url).json().get("count", 0)
+        miasto = korzen.find("Miasto")
+        if miasto is None:
+            miasto = korzen
 
-            istniejacy_raport = db.query(RaportZintegrowany).filter(RaportZintegrowany.rok == rok).first()
-            if not istniejacy_raport:
-                nowy_wpis = RaportZintegrowany(rok=rok, powierzchnia_parkow_ha=powierzchnia,
-                                               liczba_ptakow_api=liczba_ptakow)
-                db.add(nowy_wpis)
-                raporty_dodane.append(rok)
+
+        zielen_slownik = {}
+        for rok_elem in miasto.findall("Rok"):
+            r_val = int(rok_elem.attrib.get("wartosc"))
+            for kat in rok_elem.findall("Kategoria"):
+                if kat.attrib.get("nazwa") == "parki spacerowo - wypoczynkowe":
+                    zielen_slownik[r_val] = float(kat.text)
+
+        raporty_dodane_count = 0
+
+
+        for rok in [2018, 2019, 2020, 2021, 2022]:
+            powierzchnia = zielen_slownik.get(rok, 0.0)
+
+            for nazwa_pl, nazwa_latin in GATUNKI_ANALITYCZNE.items():
+
+                istnieje = db.query(RaportZintegrowany).filter(
+                    RaportZintegrowany.rok == rok,
+                    RaportZintegrowany.gatunek == nazwa_pl
+                ).first()
+
+                if not istnieje:
+                    # Strzał do API po konkretnego ptaszora
+                    url = f"https://api.gbif.org/v1/occurrence/search?country=PL&stateProvince=Lubelskie&classKey=212&scientificName={nazwa_latin}&year={rok}&limit=1"
+                    liczba_ptakow = requests.get(url).json().get("count", 0)
+
+
+                    nowy_wpis = RaportZintegrowany(
+                        rok=rok,
+                        gatunek=nazwa_pl,
+                        powierzchnia_parkow_ha=powierzchnia,
+                        liczba_ptakow_api=liczba_ptakow
+                    )
+                    db.add(nowy_wpis)
+                    raporty_dodane_count += 1
 
         db.commit()
-        return {"status": "Sukces!", "dodane_lata": raporty_dodane}
+        return {"status": "Sukces!",
+                "wiadomosc": f"Zintegrowano i dodano {raporty_dodane_count} nowych rekordów analitycznych."}
     except Exception as e:
         db.rollback()
         return {"status": "blad", "wiadomosc": str(e)}
     finally:
         db.close()
+
+
+
+@app.get("/api/wykres/{gatunek}")
+def pobierz_dane_wykresu(gatunek: str, user=Depends(jwt_auth.get_current_user)):
+    db = SessionLocal()
+    wyniki = db.query(RaportZintegrowany).filter(RaportZintegrowany.gatunek == gatunek).order_by(
+        RaportZintegrowany.rok.asc()).all()
+    db.close()
+
+
+    return {
+        "lata": [r.rok for r in wyniki],
+        "zielen": [r.powierzchnia_parkow_ha for r in wyniki],
+        "ptaki": [r.liczba_ptakow_api for r in wyniki]
+    }
