@@ -63,11 +63,15 @@
                 <canvas id="canvasWykresu" width="400" height="200"></canvas>
             </div>
             <div id="kontener-eksportu" class="export-container">
-                <button id="btn-eksport-xml" class="btn-generate btn-export-xml">
-                    Pobierz dane w formacie XML
-                </button>
-                <button id="btn-eksport-json" class="btn-generate btn-export-json">
-                    Pobierz dane w formacie JSON
+                <div class="export-format-group">
+                    <label for="select-format-eksportu" class="export-label">Format pliku</label>
+                    <select id="select-format-eksportu" class="export-format-select">
+                        <option value="xml">XML</option>
+                        <option value="json">JSON</option>
+                    </select>
+                </div>
+                <button id="btn-pobierz-eksport" class="btn-download-report">
+                    Pobierz raport
                 </button>
             </div>
         </div>

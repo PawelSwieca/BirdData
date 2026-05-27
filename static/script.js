@@ -226,61 +226,46 @@ async function generujWykresAnalizy() {
             }
         });
 
-        const kontenerEksportu = document.getElementById('kontener-eksportu');
-        const btnEksportXML = document.getElementById('btn-eksport-xml');
-        const btnEksportJSON = document.getElementById('btn-eksport-json');
+         const kontenerEksportu = document.getElementById('kontener-eksportu');
+        const selectFormatEksportu = document.getElementById('select-format-eksportu');
+        const btnPobierzEksport = document.getElementById('btn-pobierz-eksport');
 
 
         kontenerEksportu.style.display = 'flex';
 
-        btnEksportXML.onclick = async () => {
-            btnEksportXML.innerText = "Generowanie pliku...";
+               btnPobierzEksport.onclick = async () => {
+            const wybranyFormat = selectFormatEksportu.value;
+            const zakodowanyGatunek = encodeURIComponent(wybranyGatunek);
+            const oryginalnyTekst = btnPobierzEksport.innerText;
+
+            btnPobierzEksport.innerText = "Generowanie pliku...";
+            btnPobierzEksport.disabled = true;
+
             try {
-                const odpEksport = await wykonajAutoryzowanyFetch(`/api/eksport/xml/${wybranyGatunek}`);
-                if (!odpEksport.ok) throw new Error("Błąd podczas eksportu");
-
-
-                const plikBlob = await odpEksport.blob();
-
-
-                const urlPobierania = window.URL.createObjectURL(plikBlob);
-                const a = document.createElement('a');
-                a.href = urlPobierania;
-                a.download = `raport_${wybranyGatunek.replace(/\s+/g, '_')}.xml`;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                window.URL.revokeObjectURL(urlPobierania);
-
-                btnEksportXML.innerText = "Pobrano!";
-                setTimeout(() => btnEksportXML.innerText = "Pobierz te dane jako XML", 2000);
-            } catch (error) {
-                alert(error.message);
-                btnEksportXML.innerText = "Pobierz te dane jako XML";
-            }
-        };
-
-        btnEksportJSON.onclick = async () => {
-            btnEksportJSON.innerText = "Generowanie...";
-            try {
-                const odpEksport = await wykonajAutoryzowanyFetch(`/api/eksport/json/${wybranyGatunek}`);
-                if (!odpEksport.ok) throw new Error("Błąd podczas eksportu JSON");
+                const odpEksport = await wykonajAutoryzowanyFetch(`/api/eksport/${wybranyFormat}/${zakodowanyGatunek}`);
+                if (!odpEksport.ok) throw new Error(`Błąd podczas eksportu ${wybranyFormat.toUpperCase()}`);
 
                 const plikBlob = await odpEksport.blob();
                 const urlPobierania = window.URL.createObjectURL(plikBlob);
                 const a = document.createElement('a');
+
                 a.href = urlPobierania;
-                a.download = `raport_${wybranyGatunek.replace(/\s+/g, '_')}.json`;
+                a.download = `raport_${wybranyGatunek.replace(/\s+/g, '_')}.${wybranyFormat}`;
                 document.body.appendChild(a);
                 a.click();
                 a.remove();
+
                 window.URL.revokeObjectURL(urlPobierania);
 
-                btnEksportJSON.innerText = "Pobrano JSON!";
-                setTimeout(() => btnEksportJSON.innerText = "Pobierz JSON", 2000);
+                btnPobierzEksport.innerText = "Pobrano raport!";
+                setTimeout(() => {
+                    btnPobierzEksport.innerText = oryginalnyTekst;
+                    btnPobierzEksport.disabled = false;
+                }, 2000);
             } catch (error) {
                 alert(error.message);
-                btnEksportJSON.innerText = "Pobierz JSON";
+                btnPobierzEksport.innerText = oryginalnyTekst;
+                btnPobierzEksport.disabled = false;
             }
         };
 

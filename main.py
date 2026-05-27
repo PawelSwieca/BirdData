@@ -28,6 +28,33 @@ GATUNKI_ANALITYCZNE = {
     "Gęś gęgawa": "Anser anser"
 }
 
+def przygotuj_nazwe_pliku(gatunek: str, rozszerzenie: str):
+    mapa_znakow = str.maketrans({
+        "ą": "a",
+        "ć": "c",
+        "ę": "e",
+        "ł": "l",
+        "ń": "n",
+        "ó": "o",
+        "ś": "s",
+        "ż": "z",
+        "ź": "z",
+        "Ą": "A",
+        "Ć": "C",
+        "Ę": "E",
+        "Ł": "L",
+        "Ń": "N",
+        "Ó": "O",
+        "Ś": "S",
+        "Ż": "Z",
+        "Ź": "Z",
+    })
+
+    bez_polskich_znakow = gatunek.translate(mapa_znakow)
+    bezpieczna_nazwa = re.sub(r"[^a-zA-Z0-9_-]+", "_", bez_polskich_znakow)
+
+    return f"raport_{bezpieczna_nazwa}.{rozszerzenie}"
+
 
 
 
@@ -158,13 +185,14 @@ def eksportuj_wykres_xml(gatunek: str, user=Depends(jwt_auth.get_current_user), 
 
 
     xml_str = ET.tostring(root, encoding="utf-8", method="xml", xml_declaration=True)
+    nazwa_pliku = przygotuj_nazwe_pliku(gatunek, "xml")
 
 
     return Response(
         content=xml_str,
         media_type="application/xml",
         headers={
-            "Content-Disposition": f'attachment; filename="raport_{gatunek.replace(" ", "_")}.xml"'
+            "Content-Disposition": f'attachment; filename="{nazwa_pliku}"'
         }
     )
 
@@ -190,11 +218,13 @@ def eksportuj_wykres_json(gatunek: str, user=Depends(jwt_auth.get_current_user),
         ]
     }
 
+    nazwa_pliku = przygotuj_nazwe_pliku(gatunek, "json")
+
 
     return JSONResponse(
         content=dane_do_eksportu,
         headers={
-            "Content-Disposition": f'attachment; filename="raport_{gatunek.replace(" ", "_")}.json"'
+            "Content-Disposition": f'attachment; filename="{nazwa_pliku}"'
         }
     )
 
