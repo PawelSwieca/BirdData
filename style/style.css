@@ -194,7 +194,7 @@ button:active { transform: translateY(1px); }
 .header-actions { position: absolute; top: 30px; right: 30px; display: flex; gap: 10px; }
 .btn-icon { width: 40px; height: 40px; padding: 0; border-radius: 12px; background: var(--input-bg); border: 1px solid var(--input-border); color: var(--text-main); box-shadow: none; font-size: 1.2rem; }
 .btn-icon:hover { background: var(--section-bg); box-shadow: none; }
-.btn-logout { width: auto; padding: 8px 16px; background: var(--error-bg); color: #d6336c; border: 1px solid #ffb3c1; box-shadow: none; border-radius: 12px; font-size: 0.85rem; }
+.btn-logout { width: auto; padding: 8px 16px; color: #d6336c; border: 1px solid #ffb3c1; box-shadow: none; border-radius: 12px; font-size: 0.85rem; }
 
 /* --- SECTIONS --- */
 .analysis-section { background: var(--section-bg); border-radius: 20px; padding: 25px; margin-bottom: 25px; border: 1px solid var(--border-glass); }
