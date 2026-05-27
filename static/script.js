@@ -137,9 +137,11 @@ async function uruchomIntegracje() {
         if (dane.status === "Sukces!") {
             btn.innerHTML = `Baza zaktualizowana! ✨`;
             btn.style.background = "var(--success-border)";
+            btn.style.color = "#787200"
             setTimeout(() => {
                 btn.innerHTML = originalText;
                 btn.style.background = "";
+                btn.style.color = "var(--text-main)";
                 btn.style.pointerEvents = "auto";
             }, 3000);
         } else {
