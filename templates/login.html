@@ -1,10 +1,10 @@
 {% extends "./components/base.html" %}
 
-{% block title %}Logowanie ✨{% endblock %}
+{% block title %} Logowanie {% endblock %}
 
 {% block content %}
 <div class="glass-panel panel-auth">
-    <h2>Witaj ponownie 👋</h2>
+    <h2>Witaj ponownie</h2>
 
     <form id="loginForm">
         <div class="input-group">
@@ -13,7 +13,7 @@
         <div class="input-group">
             <input type="password" id="password" placeholder="Hasło" required>
         </div>
-        <button type="submit">Zaloguj się ✨</button>
+        <button type="submit">Zaloguj się</button>
     </form>
 
     <div id="msg" class="msg" style="margin-top: 20px;"></div>
@@ -28,7 +28,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const msgElement = document.getElementById("msg");
     msgElement.className = "msg";
-    msgElement.innerText = "Chwileczkę... 🔮";
+    msgElement.innerText = "Chwileczkę...";
 
     const formData = new URLSearchParams();
     formData.append("username", document.getElementById("username").value);
@@ -45,7 +45,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
         if (res.ok && data.access_token) {
             localStorage.setItem("token", data.access_token);
             msgElement.className = "msg msg-success";
-            msgElement.innerText = "Zalogowano! Przekierowanie... ✨";
+            msgElement.innerText = "Zalogowano! Przekierowanie...";
             setTimeout(() => { window.location.href = "/"; }, 800);
         } else {
             msgElement.className = "msg msg-error";

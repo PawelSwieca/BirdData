@@ -281,6 +281,59 @@ button:active {
     box-shadow: 0 8px 20px rgba(255, 126, 179, 0.25);
 }
 
+.flex-row-wrap {
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.year-badge {
+    background: var(--input-bg);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    color: var(--primary);
+    border: 1px solid var(--input-border);
+}
+
+.year-input {
+    max-width: 150px;
+}
+
+.btn-auto-width {
+    width: auto;
+}
+
+.api-result-container {
+    margin-top: 20px;
+}
+
+.chart-container {
+    margin-top: 30px;
+    background: var(--input-bg);
+    border-radius: 16px;
+    padding: 15px;
+    border: 1px solid var(--input-border);
+}
+
+.export-container {
+    display: none;
+    text-align: center;
+    margin-top: 20px;
+}
+
+.btn-export-xml {
+    background: linear-gradient(135deg, #ff9a9e, #fecfef);
+    color: #333;
+    font-weight: 700;
+}
+
+.btn-export-json {
+    background: linear-gradient(135deg, #f6d365, #fda085);
+    color: #333;
+    font-weight: 700;
+    margin: 0;
+}
+
 .btn-logout {
     width: auto;
     padding: 8px 16px;

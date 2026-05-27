@@ -6,7 +6,6 @@ from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from dotenv import load_dotenv
 
-# Import DB session and User model
 from sqlalchemy.orm import Session
 from db.database import SessionLocal
 from db.models import User
@@ -28,7 +27,6 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-# Updated to use the database session
 def authenticate_user(db: Session, username: str, password: str):
     user = db.query(User).filter(User.username == username).first()
     if not user:
@@ -48,7 +46,6 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 
-# Updated to check the actual DB
 def get_current_user(token: str = Depends(oauth2_scheme)):
     db = SessionLocal()
     try:
