@@ -1,16 +1,9 @@
-// ==========================================
-// AUTHENTICATION GUARD
-// ==========================================
 const currentPath = window.location.pathname;
 if (!localStorage.getItem("token") && currentPath !== "/login" && currentPath !== "/register") {
     window.location.href = "/login";
 }
 
-// ==========================================
-// GLOBAL UI LOGIC (Theme & Logout)
-// ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Theme Toggle Logic
     const toggleBtn = document.getElementById('themeToggle');
     if (toggleBtn) {
         toggleBtn.addEventListener('click', () => {
@@ -23,23 +16,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('theme', 'dark');
             }
 
-            // Optional: If chart is open, trigger a redraw to update axis colors for dark mode
             if (mojWykresInstance) {
                 generujWykresAnalizy();
             }
         });
     }
 
-    // 2. Global Logout Button Visibility
     const globalLogoutBtn = document.getElementById('globalLogoutBtn');
     if (globalLogoutBtn && localStorage.getItem('token')) {
         globalLogoutBtn.style.display = 'inline-flex';
     }
 });
 
-// ==========================================
-// DASHBOARD TABS LOGIC
-// ==========================================
+
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -48,9 +37,7 @@ function switchTab(tabId) {
     event.currentTarget.classList.add('active');
 }
 
-// ==========================================
-// AUTHORIZED FETCH HELPER
-// ==========================================
+
 async function wykonajAutoryzowanyFetch(url, opcje = {}) {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -73,9 +60,7 @@ async function wykonajAutoryzowanyFetch(url, opcje = {}) {
     return odpowiedz;
 }
 
-// ==========================================
-// 1. EKSPLORATOR API (GBIF)
-// ==========================================
+
 async function pobierzPtakiZBackendu() {
     const kontenerWynikow = document.getElementById('wynik-api');
     const wybranyRok = document.getElementById('input-rok').value;
@@ -93,7 +78,6 @@ async function pobierzPtakiZBackendu() {
 
         const dane = await odpowiedz.json();
 
-        // Build the list using our new premium CSS classes
         let listHTML = dane.przykladowe_ptaki.map(ptak => `
             <li>
                 <span><strong>Gatunek:</strong> ${ptak.gatunek || "Nieznany"}</span>
@@ -101,7 +85,7 @@ async function pobierzPtakiZBackendu() {
             </li>
         `).join('');
 
-        // Inject the summary card and the list
+
         kontenerWynikow.innerHTML = `
             <div class="api-summary-card">
                 <span class="number">${dane.laczna_liczba_obserwacji_w_api}</span>
@@ -117,16 +101,12 @@ async function pobierzPtakiZBackendu() {
     }
 }
 
-// ==========================================
-// 2. INTEGRACJA BAZY DANYCH
-// ==========================================
+
 async function uruchomIntegracje() {
-    // Note: Assuming you want this to show up in a specific container, or you can add a dedicated div in the HTML for DB messages.
-    // For now, using the active tab's context or an alert, or injecting a temp message.
     const btn = event.currentTarget;
     const originalText = btn.innerHTML;
 
-    btn.innerHTML = "Trwa analityczna integracja danych... ⏳";
+    btn.innerHTML = "Trwa analityczna integracja danych...";
     btn.style.pointerEvents = "none";
 
     try {
@@ -135,7 +115,7 @@ async function uruchomIntegracje() {
         const dane = await odpowiedz.json();
 
         if (dane.status === "Sukces!") {
-            btn.innerHTML = `Baza zaktualizowana! ✨`;
+            btn.innerHTML = `Baza zaktualizowana!`;
             btn.style.background = "var(--success-border)";
             btn.style.color = "#787200"
             setTimeout(() => {
@@ -154,13 +134,10 @@ async function uruchomIntegracje() {
     }
 }
 
-// ==========================================
-// 3. GENEROWANIE WYKRESU (CHART.JS)
-// ==========================================
+
 let mojWykresInstance = null;
 
 async function generujWykresAnalizy() {
-    // Create or get a message container near the chart
     let msgContainer = document.getElementById('chart-msg');
     if (!msgContainer) {
         msgContainer = document.createElement('div');
@@ -181,13 +158,13 @@ async function generujWykresAnalizy() {
             throw new Error("Baza danych jest pusta. Uruchom najpierw integrację danych.");
         }
 
-        msgContainer.innerHTML = ``; // Clear loading message
+        msgContainer.innerHTML = ``;
 
         if (mojWykresInstance) {
             mojWykresInstance.destroy();
         }
 
-        // Determine text color based on current theme
+
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         const textColor = isDark ? '#a7a9be' : '#636e72';
         const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
@@ -243,11 +220,69 @@ async function generujWykresAnalizy() {
                         position: 'right',
                         title: { display: true, text: 'Liczba rekordów w GBIF', color: '#7a5cff' },
                         ticks: { color: textColor },
-                        grid: { drawOnChartArea: false } // Prevent overlapping grid lines
+                        grid: { drawOnChartArea: false }
                     }
                 }
             }
         });
+
+        const kontenerEksportu = document.getElementById('kontener-eksportu');
+        const btnEksportXML = document.getElementById('btn-eksport-xml');
+        const btnEksportJSON = document.getElementById('btn-eksport-json');
+
+
+        kontenerEksportu.style.display = 'flex';
+
+        btnEksportXML.onclick = async () => {
+            btnEksportXML.innerText = "Generowanie pliku...";
+            try {
+                const odpEksport = await wykonajAutoryzowanyFetch(`/api/eksport/xml/${wybranyGatunek}`);
+                if (!odpEksport.ok) throw new Error("Błąd podczas eksportu");
+
+
+                const plikBlob = await odpEksport.blob();
+
+
+                const urlPobierania = window.URL.createObjectURL(plikBlob);
+                const a = document.createElement('a');
+                a.href = urlPobierania;
+                a.download = `raport_${wybranyGatunek.replace(/\s+/g, '_')}.xml`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(urlPobierania);
+
+                btnEksportXML.innerText = "Pobrano!";
+                setTimeout(() => btnEksportXML.innerText = "Pobierz te dane jako XML", 2000);
+            } catch (error) {
+                alert(error.message);
+                btnEksportXML.innerText = "Pobierz te dane jako XML";
+            }
+        };
+
+        btnEksportJSON.onclick = async () => {
+            btnEksportJSON.innerText = "Generowanie...";
+            try {
+                const odpEksport = await wykonajAutoryzowanyFetch(`/api/eksport/json/${wybranyGatunek}`);
+                if (!odpEksport.ok) throw new Error("Błąd podczas eksportu JSON");
+
+                const plikBlob = await odpEksport.blob();
+                const urlPobierania = window.URL.createObjectURL(plikBlob);
+                const a = document.createElement('a');
+                a.href = urlPobierania;
+                a.download = `raport_${wybranyGatunek.replace(/\s+/g, '_')}.json`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(urlPobierania);
+
+                btnEksportJSON.innerText = "Pobrano JSON!";
+                setTimeout(() => btnEksportJSON.innerText = "Pobierz JSON", 2000);
+            } catch (error) {
+                alert(error.message);
+                btnEksportJSON.innerText = "Pobierz JSON";
+            }
+        };
 
     } catch (error) {
         msgContainer.innerHTML = `<div class="msg msg-error"><b>BŁĄD WYKRESU:</b> ${error.message}</div>`;

@@ -26,9 +26,9 @@
     <div id="tab-db" class="tab-content active">
         <div class="analysis-section">
             <h4>Dostępne lata do analizy:</h4>
-            <div class="flex-row" style="flex-wrap: wrap; gap: 10px;">
+            <div class="flex-row flex-row-wrap">
                 {% for rok in lata_badane %}
-                <span style="background: var(--input-bg); padding: 8px 16px; border-radius: 20px; font-weight: 600; color: var(--primary); border: 1px solid var(--input-border);">
+                <span class="year-badge">
                     {{ rok }}
                 </span>
                 {% endfor %}
@@ -41,10 +41,10 @@
         <div class="analysis-section">
             <h4>Pobieranie surowych danych na żywo</h4>
             <div class="flex-row">
-                <input class="input-field" type="number" id="input-rok" value="2022" min="2000" max="2024" style="max-width: 150px;">
-                <button class="btn-accent" style="width: auto;" onclick="pobierzPtakiZBackendu()">Szukaj w GBIF</button>
+                <input class="input-field year-input" type="number" id="input-rok" value="2022" min="2000" max="2024">
+                <button class="btn-accent btn-auto-width" onclick="pobierzPtakiZBackendu()">Szukaj w GBIF</button>
             </div>
-            <div id="wynik-api" style="margin-top: 20px;"></div>
+            <div id="wynik-api" class="api-result-container"></div>
         </div>
     </div>
 
@@ -57,10 +57,18 @@
                     <option value="Kaczka krzyżówka">Kaczka krzyżówka (Anas platyrhynchos)</option>
                     <option value="Gęś gęgawa">Gęś gęgawa (Anser anser)</option>
                 </select>
-                <button class="btn-accent" style="width: auto;" onclick="generujWykresAnalizy()">Generuj Wykres</button>
+                <button class="btn-accent btn-auto-width" onclick="generujWykresAnalizy()">Generuj Wykres</button>
             </div>
-            <div style="margin-top: 30px; background: var(--input-bg); border-radius: 16px; padding: 15px; border: 1px solid var(--input-border);">
+            <div class="chart-container">
                 <canvas id="canvasWykresu" width="400" height="200"></canvas>
+            </div>
+            <div id="kontener-eksportu" class="export-container">
+                <button id="btn-eksport-xml" class="btn-generate btn-export-xml">
+                    Pobierz dane w formacie XML
+                </button>
+                <button id="btn-eksport-json" class="btn-generate btn-export-json">
+                    Pobierz dane w formacie JSON
+                </button>
             </div>
         </div>
     </div>

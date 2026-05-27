@@ -1,10 +1,8 @@
 from fastapi import FastAPI, Request, Depends, HTTPException, Form
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response, JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from starlette import status
-from starlette.responses import JSONResponse
 import xml.etree.ElementTree as ET
 import requests
 from datetime import timedelta
@@ -15,7 +13,7 @@ from static import jwt_auth
 from db.database import engine, Base, get_db, SessionLocal
 from db.models import User, RaportZintegrowany
 
-# Create all tables (including the new User table)
+
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
@@ -31,11 +29,11 @@ GATUNKI_ANALITYCZNE = {
 }
 
 
-# --- AUTH ROUTES ---
+
 
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    # Notice we pass `db` to authenticate_user now
+
     user = jwt_auth.authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code=400, detail="Nieprawidłowy login lub hasło")
@@ -54,7 +52,7 @@ async def register_user(
         password: str = Form(...),
         db: Session = Depends(get_db)
 ):
-    # --- 1. WALIDACJA DANYCH ---
+
     if len(username) < 3:
         raise HTTPException(status_code=400, detail="Login musi mieć co najmniej 3 znaki.")
 
@@ -64,7 +62,7 @@ async def register_user(
     if len(password) < 6:
         raise HTTPException(status_code=400, detail="Hasło musi mieć co najmniej 6 znaków.")
 
-    # --- 2. SPRAWDZENIE CZY UŻYTKOWNIK ISTNIEJE ---
+
     existing_user = db.query(User).filter(
         (User.username == username) | (User.email == email)
     ).first()
@@ -75,7 +73,7 @@ async def register_user(
             detail="Ten login lub e-mail jest już zajęty."
         )
 
-    # --- 3. ZAPIS DO BAZY ---
+
     hashed_pwd = jwt_auth.get_password_hash(password)
     new_user = User(username=username, email=email, hashed_password=hashed_pwd)
 
@@ -87,7 +85,7 @@ async def register_user(
         db.rollback()
         raise HTTPException(status_code=500, detail="Wystąpił błąd bazy danych.")
 
-    # --- 4. AUTO-LOGIN (Generowanie tokenu od razu po rejestracji) ---
+
     token = jwt_auth.create_access_token(
         data={"sub": new_user.username},
         expires_delta=timedelta(minutes=jwt_auth.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -95,7 +93,7 @@ async def register_user(
 
     return {"access_token": token, "token_type": "bearer", "message": "Konto zostało utworzone"}
 
-# --- PAGE ROUTES ---
+
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
@@ -117,7 +115,7 @@ def strona_glowna(request: Request):
     return templates.TemplateResponse(request=request, name="index.html", context=dane_do_wyslania)
 
 
-# --- API ROUTES ---
+
 
 @app.get("/api/ptaki/{rok}")
 def pobierz_ptaki(rok: int, user=Depends(jwt_auth.get_current_user)):
@@ -137,9 +135,71 @@ def pobierz_ptaki(rok: int, user=Depends(jwt_auth.get_current_user)):
     }
 
 
+
+@app.get("/api/eksport/xml/{gatunek}")
+def eksportuj_wykres_xml(gatunek: str, user=Depends(jwt_auth.get_current_user), db: Session = Depends(get_db)):
+    # 1. Pobieramy dane z bazy tak samo jak do wykresu
+    wyniki = db.query(RaportZintegrowany).filter(RaportZintegrowany.gatunek == gatunek).order_by(
+        RaportZintegrowany.rok.asc()
+    ).all()
+
+
+    root = ET.Element("AnalizaBioroznorodnosci")
+    info = ET.SubElement(root, "Metadane")
+    ET.SubElement(info, "Gatunek").text = gatunek
+    ET.SubElement(info, "WygenerowanoPrzez").text = user.username
+
+    dane_element = ET.SubElement(root, "DaneAnalityczne")
+
+    for r in wyniki:
+        rok_elem = ET.SubElement(dane_element, "RokPomiarowy", rok=str(r.rok))
+        ET.SubElement(rok_elem, "PowierzchniaParkow_ha").text = str(r.powierzchnia_parkow_ha)
+        ET.SubElement(rok_elem, "LiczbaObserwacji").text = str(r.liczba_ptakow_api)
+
+
+    xml_str = ET.tostring(root, encoding="utf-8", method="xml", xml_declaration=True)
+
+
+    return Response(
+        content=xml_str,
+        media_type="application/xml",
+        headers={
+            "Content-Disposition": f'attachment; filename="raport_{gatunek.replace(" ", "_")}.xml"'
+        }
+    )
+
+
+@app.get("/api/eksport/json/{gatunek}")
+def eksportuj_wykres_json(gatunek: str, user=Depends(jwt_auth.get_current_user), db: Session = Depends(get_db)):
+    wyniki = db.query(RaportZintegrowany).filter(RaportZintegrowany.gatunek == gatunek).order_by(
+        RaportZintegrowany.rok.asc()
+    ).all()
+
+    dane_do_eksportu = {
+        "metadane": {
+            "gatunek": gatunek,
+            "wygenerowano_przez": user.username
+        },
+        "dane_analityczne": [
+            {
+                "rok_pomiarowy": r.rok,
+                "powierzchnia_parkow_ha": r.powierzchnia_parkow_ha,
+                "liczba_obserwacji": r.liczba_ptakow_api
+            }
+            for r in wyniki
+        ]
+    }
+
+
+    return JSONResponse(
+        content=dane_do_eksportu,
+        headers={
+            "Content-Disposition": f'attachment; filename="raport_{gatunek.replace(" ", "_")}.json"'
+        }
+    )
+
 @app.post("/api/integruj_i_zapisz")
 def integruj_do_bazy(user=Depends(jwt_auth.get_current_user), db: Session = Depends(get_db)):
-    # Notice I replaced SessionLocal() here with the injected `db` dependency
     try:
         drzewo = ET.parse("zielen_lublin.xml")
         korzen = drzewo.getroot()

@@ -1,10 +1,10 @@
 {% extends "./components/base.html" %}
 
-{% block title %}Rejestracja ✨{% endblock %}
+{% block title %} Rejestracja {% endblock %}
 
 {% block content %}
 <div class="glass-panel panel-auth">
-    <h2>Dołącz do nas 💫</h2>
+    <h2>Dołącz do nas </h2>
 
     <form id="registerForm">
         <div class="input-group">
@@ -16,7 +16,7 @@
         <div class="input-group">
             <input type="password" id="password" placeholder="Hasło (min. 6 znaków)" required>
         </div>
-        <button type="submit">Zarejestruj się ✨</button>
+        <button type="submit">Zarejestruj się </button>
     </form>
 
     <div id="msg" class="msg" style="margin-top: 20px;"></div>
@@ -31,7 +31,7 @@ document.getElementById("registerForm").addEventListener("submit", async (e) => 
     e.preventDefault();
     const msgElement = document.getElementById("msg");
     msgElement.className = "msg";
-    msgElement.innerText = "Tworzenie konta... 🔮";
+    msgElement.innerText = "Tworzenie konta...";
 
     const formData = new URLSearchParams();
     formData.append("username", document.getElementById("username").value);
@@ -49,7 +49,7 @@ document.getElementById("registerForm").addEventListener("submit", async (e) => 
         if (res.ok && data.access_token) {
             localStorage.setItem("token", data.access_token);
             msgElement.className = "msg msg-success";
-            msgElement.innerText = "Zarejestrowano pomyślnie! Logowanie... ✨";
+            msgElement.innerText = "Zarejestrowano pomyślnie! Logowanie...";
             setTimeout(() => { window.location.href = "/"; }, 1200);
         } else {
             msgElement.className = "msg msg-error";
