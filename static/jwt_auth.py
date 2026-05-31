@@ -53,16 +53,17 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         username: str = payload.get("sub")
         if username is None:
             raise HTTPException(status_code=401, detail="Token nie zawiera pola użytkownika (sub)")
+
+        user = db.query(User).filter(User.username == username).first()
+
     except JWTError as e:
-        db.close()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Błąd autoryzacji (JWT): {str(e)}",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
-    user = db.query(User).filter(User.username == username).first()
-    db.close()
+    finally:
+        db.close()
 
     if user is None:
         raise HTTPException(status_code=401, detail="Użytkownik z tokenu nie istnieje w bazie")

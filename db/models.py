@@ -13,9 +13,13 @@ class User(Base):
 
 class RaportZintegrowany(Base):
     __tablename__ = "raporty_zintegrowane"
-
     id = Column(Integer, primary_key=True, index=True)
     rok = Column(Integer, index=True)
     gatunek = Column(String, index=True)
-    powierzchnia_parkow_ha = Column(Float)
     liczba_ptakow_api = Column(Integer)
+    parki = Column(Float)
+    zielence = Column(Float)
+    zielen_uliczna = Column(Float)
+    zielen_osiedlowa = Column(Float)
+    cmentarze = Column(Float)
+    lasy = Column(Float)

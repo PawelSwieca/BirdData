@@ -3,7 +3,7 @@
 {% block title %}{{ tytul }}{% endblock %}
 
 {% block extra_head %}
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -18,9 +18,9 @@
     {% endif %}
 
     <div class="tabs-header">
-        <button class="tab-btn active" onclick="switchTab('tab-db')">Baza Danych 🗄️</button>
-        <button class="tab-btn" onclick="switchTab('tab-api')">Eksplorator API 🌍</button>
-        <button class="tab-btn" onclick="switchTab('tab-chart')">Analizy 📊</button>
+        <button class="tab-btn active" onclick="switchTab('tab-db')">Baza Danych</button>
+        <button class="tab-btn" onclick="switchTab('tab-api')">Eksplorator API</button>
+        <button class="tab-btn" onclick="switchTab('tab-chart')">Analizy</button>
     </div>
 
     <div id="tab-db" class="tab-content active">
@@ -53,9 +53,12 @@
             <h4>Analiza korelacji populacji</h4>
             <div class="flex-row">
                 <select id="select-ptak" class="analysis-select">
-                    <option value="Wróbel domowy">Wróbel domowy (Passer domesticus)</option>
-                    <option value="Kaczka krzyżówka">Kaczka krzyżówka (Anas platyrhynchos)</option>
-                    <option value="Gęś gęgawa">Gęś gęgawa (Anser anser)</option>
+                    <option value="Wróbel domowy">Wróbel domowy</option>
+                    <option value="Kaczka krzyżówka">Kaczka krzyżówka</option>
+                    <option value="Gęś gęgawa">Gęś gęgawa</option>
+                    <option value="Gołąb miejski">Gołąb miejski</option>
+                    <option value="Sikorka bogatka">Sikorka bogatka</option>
+                    <option value="Wrona siwa">Wrona siwa</option>
                 </select>
                 <button class="btn-accent btn-auto-width" onclick="generujWykresAnalizy()">Generuj Wykres</button>
             </div>
@@ -63,16 +66,16 @@
                 <canvas id="canvasWykresu" width="400" height="200"></canvas>
             </div>
             <div id="kontener-eksportu" class="export-container">
-                <div class="export-format-group">
-                    <label for="select-format-eksportu" class="export-label">Format pliku</label>
-                    <select id="select-format-eksportu" class="export-format-select">
-                        <option value="xml">XML</option>
-                        <option value="json">JSON</option>
-                    </select>
-                </div>
                 <button id="btn-pobierz-eksport" class="btn-download-report">
                     Pobierz raport
                 </button>
+                <div class="export-format-group">
+                    <label for="select-format-eksportu" class="export-label">Format pliku</label>
+                    <select id="select-format-eksportu" class="export-format-select analysis-select">
+                        <option value="xml">.XML</option>
+                        <option value="json">.JSON</option>
+                    </select>
+                </div>
             </div>
         </div>
     </div>

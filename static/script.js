@@ -51,7 +51,7 @@ async function wykonajAutoryzowanyFetch(url, opcje = {}) {
             "Content-Type": "application/json"
         }
     };
-    const odpowiedz = await fetch(url, { ...domyslneOpcje, ...opcje });
+    const odpowiedz = await fetch(url, {...domyslneOpcje, ...opcje});
     if (odpowiedz.status === 401) {
         localStorage.removeItem("token");
         window.location.href = "/login";
@@ -110,7 +110,7 @@ async function uruchomIntegracje() {
     btn.style.pointerEvents = "none";
 
     try {
-        const odpowiedz = await wykonajAutoryzowanyFetch('/api/integruj_i_zapisz', { method: 'POST' });
+        const odpowiedz = await wykonajAutoryzowanyFetch('/api/integruj_i_zapisz', {method: 'POST'});
         if (!odpowiedz.ok) throw new Error(`Błąd serwera: ${odpowiedz.status}`);
         const dane = await odpowiedz.json();
 
@@ -170,70 +170,127 @@ async function generujWykresAnalizy() {
         const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
 
         const ctx = document.getElementById('canvasWykresu').getContext('2d');
+
+        const sumaZieleni = daneZ_Bazy.lata.map((_, index) => {
+            return daneZ_Bazy.parki[index] +
+                   daneZ_Bazy.zielence[index] +
+                   daneZ_Bazy.zielen_uliczna[index] +
+                   daneZ_Bazy.zielen_osiedlowa[index] +
+                   daneZ_Bazy.cmentarze[index] +
+                   daneZ_Bazy.lasy[index];
+        });
+
         mojWykresInstance = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: daneZ_Bazy.lata,
                 datasets: [
                     {
-                        label: 'Powierzchnia parków (ha)',
-                        data: daneZ_Bazy.zielen,
-                        borderColor: '#2f8f4e',
+                        label: `Obserwacje: ${wybranyGatunek}`,
+                        data: daneZ_Bazy.ptaki,
+                        borderColor: '#7a5cff',
+                        backgroundColor: '#7a5cff',
+                        borderWidth: 4,
+                        yAxisID: 'y-ptaki',
+                        tension: 0.3
+                    },
+                    {
+                        label: 'SUMA TERENÓW ZIELONYCH [ha]',
+                        data: sumaZieleni,
+                        borderColor: '#ede91a',
                         backgroundColor: 'rgba(47, 143, 78, 0.1)',
+                        borderWidth: 4,
                         yAxisID: 'y-zielen',
                         tension: 0.3,
-                        borderWidth: 3,
                         fill: true
                     },
                     {
-                        label: `Liczba obserwacji ptaka`,
-                        data: daneZ_Bazy.ptaki,
-                        borderColor: '#7a5cff',
-                        backgroundColor: 'rgba(122, 92, 255, 0.1)',
-                        yAxisID: 'y-ptaki',
+                        label: 'Parki [ha]',
+                        data: daneZ_Bazy.parki,
+                        borderColor: '#3cb371',
+                        yAxisID: 'y-zielen',
                         tension: 0.3,
-                        borderWidth: 3,
-                        fill: true
+                        hidden: true
+                    },
+                    {
+                        label: 'Zieleńce [ha]',
+                        data: daneZ_Bazy.zielence,
+                        borderColor: '#66cc8a',
+                        yAxisID: 'y-zielen',
+                        tension: 0.3,
+                        hidden: true
+                    },
+                    {
+                        label: 'Zieleń uliczna [ha]',
+                        data: daneZ_Bazy.zielen_uliczna,
+                        borderColor: '#aadb88',
+                        yAxisID: 'y-zielen',
+                        tension: 0.3,
+                        hidden: true
+                    },
+                    {
+                        label: 'Zieleń osiedlowa [ha]',
+                        data: daneZ_Bazy.zielen_osiedlowa,
+                        borderColor: '#dbed91',
+                        yAxisID: 'y-zielen',
+                        tension: 0.3,
+                        hidden: true
+                    },
+                    {
+                        label: 'Cmentarze [ha]',
+                        data: daneZ_Bazy.cmentarze,
+                        borderColor: '#8e9e82',
+                        yAxisID: 'y-zielen',
+                        tension: 0.3,
+                        hidden: true
+                    },
+                    {
+                        label: 'Lasy gminne [ha]',
+                        data: daneZ_Bazy.lasy,
+                        borderColor: '#225934',
+                        yAxisID: 'y-zielen',
+                        tension: 0.3,
+                        hidden: true
                     }
                 ]
             },
             options: {
                 responsive: true,
-                color: textColor,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
                 plugins: {
-                    legend: { labels: { color: textColor } }
+                    legend: {
+                        // Opcjonalnie: można wymusić zawijanie legendy, żeby ładnie wyglądała
+                        labels: { font: { family: 'Poppins' } }
+                    }
                 },
                 scales: {
-                    x: {
-                        ticks: { color: textColor },
-                        grid: { color: gridColor }
-                    },
                     'y-zielen': {
                         type: 'linear',
                         position: 'left',
-                        title: { display: true, text: 'Hektary [ha]', color: '#2f8f4e' },
-                        ticks: { color: textColor },
-                        grid: { color: gridColor }
+                        stacked: false, // Wyrzuciliśmy słupki, więc zdejmujemy stackowanie
+                        title: { display: true, text: 'Powierzchnia [ha]', color: '#2f8f4e' }
                     },
                     'y-ptaki': {
                         type: 'linear',
                         position: 'right',
-                        title: { display: true, text: 'Liczba rekordów w GBIF', color: '#7a5cff' },
-                        ticks: { color: textColor },
+                        title: { display: true, text: 'Zgłoszenia w GBIF', color: '#7a5cff' },
                         grid: { drawOnChartArea: false }
                     }
                 }
             }
         });
 
-         const kontenerEksportu = document.getElementById('kontener-eksportu');
+        const kontenerEksportu = document.getElementById('kontener-eksportu');
         const selectFormatEksportu = document.getElementById('select-format-eksportu');
         const btnPobierzEksport = document.getElementById('btn-pobierz-eksport');
 
 
         kontenerEksportu.style.display = 'flex';
 
-               btnPobierzEksport.onclick = async () => {
+        btnPobierzEksport.onclick = async () => {
             const wybranyFormat = selectFormatEksportu.value;
             const zakodowanyGatunek = encodeURIComponent(wybranyGatunek);
             const oryginalnyTekst = btnPobierzEksport.innerText;
@@ -273,3 +330,38 @@ async function generujWykresAnalizy() {
         msgContainer.innerHTML = `<div class="msg msg-error"><b>BŁĄD WYKRESU:</b> ${error.message}</div>`;
     }
 }
+
+
+function przygotujNazwePliku(gatunek) {
+    const mapaZnakow = {
+        "ą": "a", "ć": "c", "ę": "e", "ł": "l", "ń": "n",
+        "ó": "o", "ś": "s", "ż": "z", "ź": "z",
+        "Ą": "A", "Ć": "C", "Ę": "E", "Ł": "L", "Ń": "N",
+        "Ó": "O", "Ś": "S", "Ż": "Z", "Ź": "Z"
+    };
+
+    let bezPolskich = gatunek.split('').map(char => mapaZnakow[char] || char).join('');
+
+    let bezpieczna = bezPolskich.replace(/[^a-zA-Z0-9_-]+/g, "_");
+
+    return `raport_${bezpieczna}`;
+}
+
+function aktualizujTekstRaportu() {
+    const select = document.getElementById("select-ptak");
+    const btn = document.getElementById("btn-pobierz-eksport");
+    const format = document.getElementById("select-format-eksportu").value;
+
+    const gatunek = select.value;
+
+    const nazwaPliku = przygotujNazwePliku(gatunek, format);
+
+    btn.textContent = `Pobierz ${nazwaPliku}`;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("select-ptak").addEventListener("change", aktualizujTekstRaportu);
+    document.getElementById("select-format-eksportu").addEventListener("change", aktualizujTekstRaportu);
+
+    aktualizujTekstRaportu();
+});
