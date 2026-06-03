@@ -239,7 +239,7 @@ def integruj_do_bazy(user=Depends(jwt_auth.get_current_user), db: Session = Depe
                 ).first()
 
                 if not istnieje:
-                    # REKORDU NIE MA: Pobieramy dane z API GBIF i tworzymy nowy wpis
+                    # Pobieramy dane z API GBIF i tworzymy nowy wpis
                     url = f"https://api.gbif.org/v1/occurrence/search?country=PL&stateProvince=Lubelskie&classKey=212&scientificName={nazwa_latin}&year={rok}&limit=1"
                     liczba_ptakow = requests.get(url).json().get("count", 0)
 
@@ -257,7 +257,7 @@ def integruj_do_bazy(user=Depends(jwt_auth.get_current_user), db: Session = Depe
                     db.add(nowy_wpis)
                     raporty_dodane_count += 1
                 else:
-                    # REKORD ISTNIEJE (UPSERT): Aktualizujemy tylko dane o zieleni z pliku XML
+                    # Aktualizujemy tylko dane o zieleni z pliku XML
                     istnieje.parki = kategorie_roku.get("parki spacerowo - wypoczynkowe", 0.0)
                     istnieje.zielence = kategorie_roku.get("zieleńce", 0.0)
                     istnieje.zielen_uliczna = kategorie_roku.get("zieleń uliczna", 0.0)
