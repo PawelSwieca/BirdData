@@ -1,37 +1,42 @@
-async function pobierzPtakiZBackendu() {
-    const kontenerWynikow = document.getElementById('wynik-api');
-
-    const wybranyRok = document.getElementById('input-rok').value;
-
-    if (!wybranyRok || wybranyRok < 1800 || wybranyRok > 2025) {
-        alert("Proszę wpisać poprawny rok!");
-        return;
-    }
-
-    kontenerWynikow.innerHTML = `<p><em>Łączenie z GBIF API i pobieranie danych dla roku ${wybranyRok}...</em></p>`;
-
-    try {
-        const odpowiedz = await wykonajAutoryzowanyFetch(`/api/ptaki/${wybranyRok}`);
-        if (!odpowiedz.ok) throw new Error(`Błąd serwera: ${odpowiedz.status}`);
-
-        const dane = await odpowiedz.json();
-
-        let htmlDoWstawienia = `
-            <h4 style="color: #007bb5;">Sukces! Połączono z bazą zewnętrzną.</h4>
-            <p><b>Łączna liczba zarejestrowanych obserwacji wszystkich ptaków w woj. lubelskim w ${wybranyRok} roku:</b> ${dane.laczna_liczba_obserwacji_w_api}</p>
-            <h5>Przykładowe 5 rekordów z JSON-a:</h5>
-            <ul>
-        `;
-
-        dane.przykladowe_ptaki.forEach(ptak => {
-            htmlDoWstawienia += `<li>Gatunek: <b>${ptak.gatunek || "Nieznany"}</b> (Zgłoszono w miesiącu nr: ${ptak.miesiac || "?"})</li>`;
-        });
-
-        kontenerWynikow.innerHTML = htmlDoWstawienia + `</ul>`;
-    } catch (error) {
-        kontenerWynikow.innerHTML = `<p style="color: red;"><b>BŁĄD:</b> ${error.message}</p>`;
-    }
+const currentPath = window.location.pathname;
+if (!localStorage.getItem("token") && currentPath !== "/login" && currentPath !== "/register") {
+    window.location.href = "/login";
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const toggleBtn = document.getElementById('themeToggle');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            if (currentTheme === 'dark') {
+                document.documentElement.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+            }
+
+            if (mojWykresInstance) {
+                generujWykresAnalizy();
+            }
+        });
+    }
+
+    const globalLogoutBtn = document.getElementById('globalLogoutBtn');
+    if (globalLogoutBtn && localStorage.getItem('token')) {
+        globalLogoutBtn.style.display = 'inline-flex';
+    }
+});
+
+
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+    document.getElementById(tabId).classList.add('active');
+    event.currentTarget.classList.add('active');
+}
+
 
 async function wykonajAutoryzowanyFetch(url, opcje = {}) {
     const token = localStorage.getItem("token");
@@ -46,7 +51,7 @@ async function wykonajAutoryzowanyFetch(url, opcje = {}) {
             "Content-Type": "application/json"
         }
     };
-    const odpowiedz = await fetch(url, { ...domyslneOpcje, ...opcje });
+    const odpowiedz = await fetch(url, {...domyslneOpcje, ...opcje});
     if (odpowiedz.status === 401) {
         localStorage.removeItem("token");
         window.location.href = "/login";
@@ -56,97 +61,307 @@ async function wykonajAutoryzowanyFetch(url, opcje = {}) {
 }
 
 
-let mojWykresInstance = null;
-
-async function uruchomIntegracje() {
+async function pobierzPtakiZBackendu() {
     const kontenerWynikow = document.getElementById('wynik-api');
-    kontenerWynikow.innerHTML = "<p><em>Trwa analityczna integracja danych (XML + 3 Gatunki z REST API) w bazie danych...</em></p>";
+    const wybranyRok = document.getElementById('input-rok').value;
+
+    if (!wybranyRok || wybranyRok < 1800 || wybranyRok > 2025) {
+        alert("Proszę wpisać poprawny rok!");
+        return;
+    }
+
+    kontenerWynikow.innerHTML = `<div class="msg"><em>Łączenie z GBIF API i pobieranie danych dla roku ${wybranyRok}... 🌍</em></div>`;
+
     try {
-        const odpowiedz = await wykonajAutoryzowanyFetch('/api/integruj_i_zapisz', { method: 'POST' });
+        const odpowiedz = await wykonajAutoryzowanyFetch(`/api/ptaki/${wybranyRok}`);
         if (!odpowiedz.ok) throw new Error(`Błąd serwera: ${odpowiedz.status}`);
+
         const dane = await odpowiedz.json();
 
-        if (dane.status === "Sukces!") {
-            kontenerWynikow.innerHTML = `<h4 style="color: #2f8f4e;">Baza zaktualizowana!</h4><p>${dane.wiadomosc}</p>`;
-        } else {
-            throw new Error(dane.wiadomosc);
-        }
+        let listHTML = dane.przykladowe_ptaki.map(ptak => `
+            <li>
+                <span><strong>Gatunek:</strong> ${ptak.gatunek || "Nieznany"}</span>
+                <span class="api-month-badge">Miesiąc: ${ptak.miesiac || "?"}</span>
+            </li>
+        `).join('');
+
+
+        kontenerWynikow.innerHTML = `
+            <div class="api-summary-card">
+                <span class="number">${dane.laczna_liczba_obserwacji_w_api}</span>
+                <span class="label">Obserwacji ptaków w woj. lubelskim w ${wybranyRok} roku</span>
+            </div>
+            <h4>Przykładowe 5 rekordów z JSON-a:</h4>
+            <ul class="api-list">
+                ${listHTML}
+            </ul>
+        `;
     } catch (error) {
-        kontenerWynikow.innerHTML = `<p style="color: red;"><b>BŁĄD:</b> ${error.message}</p>`;
+        kontenerWynikow.innerHTML = `<div class="msg msg-error"><b>BŁĄD:</b> ${error.message}</div>`;
     }
 }
 
 
-async function generujWykresAnalizy() {
-    const kontenerWynikow = document.getElementById('wynik-api');
+async function uruchomIntegracje() {
+    const btn = event.currentTarget;
+    const originalText = btn.innerHTML;
 
-    const wybranyGatunek = document.getElementById('select-ptak').value;
-
-    kontenerWynikow.innerHTML = `<p><em>Pobieranie (Import) danych o gatunku: <b>${wybranyGatunek}</b> z bazy SQLite...</em></p>`;
+    btn.innerHTML = "Trwa analityczna integracja danych...";
+    btn.style.pointerEvents = "none";
 
     try {
+        const odpowiedz = await wykonajAutoryzowanyFetch('/api/integruj_i_zapisz', {method: 'POST'});
+        if (!odpowiedz.ok) throw new Error(`Błąd serwera: ${odpowiedz.status}`);
+        const dane = await odpowiedz.json();
 
+        if (dane.status === "Sukces!") {
+            btn.innerHTML = `Baza zaktualizowana!`;
+            btn.style.background = "var(--success-border)";
+            btn.style.color = "#787200"
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.style.background = "";
+                btn.style.color = "var(--text-main)";
+                btn.style.pointerEvents = "auto";
+            }, 3000);
+        } else {
+            throw new Error(dane.wiadomosc);
+        }
+    } catch (error) {
+        alert(`BŁĄD: ${error.message}`);
+        btn.innerHTML = originalText;
+        btn.style.pointerEvents = "auto";
+    }
+}
+
+
+let mojWykresInstance = null;
+
+async function generujWykresAnalizy() {
+    let msgContainer = document.getElementById('chart-msg');
+    if (!msgContainer) {
+        msgContainer = document.createElement('div');
+        msgContainer.id = 'chart-msg';
+        document.getElementById('canvasWykresu').parentElement.prepend(msgContainer);
+    }
+
+    const wybranyGatunek = document.getElementById('select-ptak').value;
+    msgContainer.innerHTML = `<div class="msg"><em>Pobieranie danych o gatunku: <b>${wybranyGatunek}</b> z bazy SQLite...</em></div>`;
+
+    try {
         const odpowiedz = await wykonajAutoryzowanyFetch(`/api/wykres/${wybranyGatunek}`);
-        if (!odpowiedz.ok) throw new Error("Brak danych w bazie! Najpierw kliknij fioletowy przycisk integracji.");
+        if (!odpowiedz.ok) throw new Error("Brak danych w bazie! Najpierw uruchom integrację (zakładka Baza Danych).");
 
         const daneZ_Bazy = await odpowiedz.json();
 
         if (daneZ_Bazy.lata.length === 0) {
-            throw new Error("Baza danych jest pusta. Uruchom najpierw integrację danych plików.");
+            throw new Error("Baza danych jest pusta. Uruchom najpierw integrację danych.");
         }
 
-
-        kontenerWynikow.innerHTML = `<h4>Wykres trendu dla: ${wybranyGatunek} (Dane zaimportowane z SQLite)</h4>`;
-
+        msgContainer.innerHTML = ``;
 
         if (mojWykresInstance) {
             mojWykresInstance.destroy();
         }
 
 
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const textColor = isDark ? '#a7a9be' : '#636e72';
+        const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+
         const ctx = document.getElementById('canvasWykresu').getContext('2d');
+
+        const sumaZieleni = daneZ_Bazy.lata.map((_, index) => {
+            return daneZ_Bazy.parki[index] +
+                   daneZ_Bazy.zielence[index] +
+                   daneZ_Bazy.zielen_uliczna[index] +
+                   daneZ_Bazy.zielen_osiedlowa[index] +
+                   daneZ_Bazy.cmentarze[index] +
+                   daneZ_Bazy.lasy[index];
+        });
+
         mojWykresInstance = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: daneZ_Bazy.lata,
                 datasets: [
                     {
-                        label: 'Powierzchnia parków (ha) ',
-                        data: daneZ_Bazy.zielen,
-                        borderColor: '#2f8f4e',
-                        backgroundColor: 'rgba(47, 143, 78, 0.1)',
-                        yAxisID: 'y-zielen',
-                        tension: 0.2
-                    },
-                    {
-                        label: `Liczba obserwacji ptaka `,
+                        label: `Obserwacje: ${wybranyGatunek}`,
                         data: daneZ_Bazy.ptaki,
                         borderColor: '#7a5cff',
-                        backgroundColor: 'rgba(122, 92, 255, 0.1)',
+                        backgroundColor: '#7a5cff',
+                        borderWidth: 4,
                         yAxisID: 'y-ptaki',
-                        tension: 0.2
+                        tension: 0.3
+                    },
+                    {
+                        label: 'SUMA TERENÓW ZIELONYCH [ha]',
+                        data: sumaZieleni,
+                        borderColor: '#ede91a',
+                        backgroundColor: 'rgba(47, 143, 78, 0.1)',
+                        borderWidth: 4,
+                        yAxisID: 'y-zielen',
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Parki [ha]',
+                        data: daneZ_Bazy.parki,
+                        borderColor: '#3cb371',
+                        yAxisID: 'y-zielen',
+                        tension: 0.3,
+                        hidden: true
+                    },
+                    {
+                        label: 'Zieleńce [ha]',
+                        data: daneZ_Bazy.zielence,
+                        borderColor: '#66cc8a',
+                        yAxisID: 'y-zielen',
+                        tension: 0.3,
+                        hidden: true
+                    },
+                    {
+                        label: 'Zieleń uliczna [ha]',
+                        data: daneZ_Bazy.zielen_uliczna,
+                        borderColor: '#aadb88',
+                        yAxisID: 'y-zielen',
+                        tension: 0.3,
+                        hidden: true
+                    },
+                    {
+                        label: 'Zieleń osiedlowa [ha]',
+                        data: daneZ_Bazy.zielen_osiedlowa,
+                        borderColor: '#dbed91',
+                        yAxisID: 'y-zielen',
+                        tension: 0.3,
+                        hidden: true
+                    },
+                    {
+                        label: 'Cmentarze [ha]',
+                        data: daneZ_Bazy.cmentarze,
+                        borderColor: '#8e9e82',
+                        yAxisID: 'y-zielen',
+                        tension: 0.3,
+                        hidden: true
+                    },
+                    {
+                        label: 'Lasy gminne [ha]',
+                        data: daneZ_Bazy.lasy,
+                        borderColor: '#225934',
+                        yAxisID: 'y-zielen',
+                        tension: 0.3,
+                        hidden: true
                     }
                 ]
             },
             options: {
                 responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        // Opcjonalnie: można wymusić zawijanie legendy, żeby ładnie wyglądała
+                        labels: { font: { family: 'Poppins' } }
+                    }
+                },
                 scales: {
                     'y-zielen': {
                         type: 'linear',
                         position: 'left',
-                        title: { display: true, text: 'Hektary [ha]', color: '#2f8f4e' }
+                        stacked: false, // Wyrzuciliśmy słupki, więc zdejmujemy stackowanie
+                        title: { display: true, text: 'Powierzchnia [ha]', color: '#2f8f4e' }
                     },
                     'y-ptaki': {
                         type: 'linear',
                         position: 'right',
-                        title: { display: true, text: 'Liczba rekordów w GBIF', color: '#7a5cff' },
+                        title: { display: true, text: 'Zgłoszenia w GBIF', color: '#7a5cff' },
                         grid: { drawOnChartArea: false }
                     }
                 }
             }
         });
 
+        const kontenerEksportu = document.getElementById('kontener-eksportu');
+        const selectFormatEksportu = document.getElementById('select-format-eksportu');
+        const btnPobierzEksport = document.getElementById('btn-pobierz-eksport');
+
+
+        kontenerEksportu.style.display = 'flex';
+
+        btnPobierzEksport.onclick = async () => {
+            const wybranyFormat = selectFormatEksportu.value;
+            const zakodowanyGatunek = encodeURIComponent(wybranyGatunek);
+            const oryginalnyTekst = btnPobierzEksport.innerText;
+
+            btnPobierzEksport.innerText = "Generowanie pliku...";
+            btnPobierzEksport.disabled = true;
+
+            try {
+                const odpEksport = await wykonajAutoryzowanyFetch(`/api/eksport/${wybranyFormat}/${zakodowanyGatunek}`);
+                if (!odpEksport.ok) throw new Error(`Błąd podczas eksportu ${wybranyFormat.toUpperCase()}`);
+
+                const plikBlob = await odpEksport.blob();
+                const urlPobierania = window.URL.createObjectURL(plikBlob);
+                const a = document.createElement('a');
+
+                a.href = urlPobierania;
+                a.download = `raport_${wybranyGatunek.replace(/\s+/g, '_')}.${wybranyFormat}`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+
+                window.URL.revokeObjectURL(urlPobierania);
+
+                btnPobierzEksport.innerText = "Pobrano raport!";
+                setTimeout(() => {
+                    btnPobierzEksport.innerText = oryginalnyTekst;
+                    btnPobierzEksport.disabled = false;
+                }, 2000);
+            } catch (error) {
+                alert(error.message);
+                btnPobierzEksport.innerText = oryginalnyTekst;
+                btnPobierzEksport.disabled = false;
+            }
+        };
+
     } catch (error) {
-        kontenerWynikow.innerHTML = `<p style="color: red;"><b>BŁĄD WYKRESU:</b> ${error.message}</p>`;
+        msgContainer.innerHTML = `<div class="msg msg-error"><b>BŁĄD WYKRESU:</b> ${error.message}</div>`;
     }
 }
+
+
+function przygotujNazwePliku(gatunek) {
+    const mapaZnakow = {
+        "ą": "a", "ć": "c", "ę": "e", "ł": "l", "ń": "n",
+        "ó": "o", "ś": "s", "ż": "z", "ź": "z",
+        "Ą": "A", "Ć": "C", "Ę": "E", "Ł": "L", "Ń": "N",
+        "Ó": "O", "Ś": "S", "Ż": "Z", "Ź": "Z"
+    };
+
+    let bezPolskich = gatunek.split('').map(char => mapaZnakow[char] || char).join('');
+
+    let bezpieczna = bezPolskich.replace(/[^a-zA-Z0-9_-]+/g, "_");
+
+    return `raport_${bezpieczna}`;
+}
+
+function aktualizujTekstRaportu() {
+    const select = document.getElementById("select-ptak");
+    const btn = document.getElementById("btn-pobierz-eksport");
+    const format = document.getElementById("select-format-eksportu").value;
+
+    const gatunek = select.value;
+
+    const nazwaPliku = przygotujNazwePliku(gatunek, format);
+
+    btn.textContent = `Pobierz ${nazwaPliku}`;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("select-ptak").addEventListener("change", aktualizujTekstRaportu);
+    document.getElementById("select-format-eksportu").addEventListener("change", aktualizujTekstRaportu);
+
+    aktualizujTekstRaportu();
+});
