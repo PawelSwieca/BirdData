@@ -273,6 +273,7 @@ button:active {
 .btn-accent {
     background: var(--gradient-accent);
     box-shadow: 0 8px 20px rgba(255, 126, 179, 0.25);
+    max-height: 65px;
 }
 
 .bnt-integrate {
