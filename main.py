@@ -61,7 +61,6 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
     )
     return {"access_token": token, "token_type": "bearer"}
 
-
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
     return templates.TemplateResponse(request=request, name="login.html", context={})
